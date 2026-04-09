@@ -237,6 +237,10 @@ function LangSwitch({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void 
 export default function Home() {
   const [lang, setLang] = useState<Lang>(() => {
     if (typeof window !== "undefined") {
+      // Priority: URL ?lang= param > localStorage > default "ru"
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlLang = urlParams.get("lang");
+      if (urlLang === "uz" || urlLang === "ru") return urlLang;
       const saved = localStorage.getItem("midea-lang");
       if (saved === "uz" || saved === "ru") return saved;
     }
@@ -248,9 +252,12 @@ export default function Home() {
   const [showSticky, setShowSticky] = useState(false);
   const [stock] = useState(47);
 
-  // Persist language choice
+  // Persist language choice + sync URL param for shareable links
   useEffect(() => {
     localStorage.setItem("midea-lang", lang);
+    const url = new URL(window.location.href);
+    url.searchParams.set("lang", lang);
+    window.history.replaceState({}, "", url.toString());
   }, [lang]);
 
   useEffect(() => {
