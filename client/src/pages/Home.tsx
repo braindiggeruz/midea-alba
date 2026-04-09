@@ -1,7 +1,8 @@
 /*
- * Midea ALBA — МЕГА-ПРОДАЮЩИЙ ЛЕНДИНГ v3 (Final Polish)
+ * Midea ALBA — МЕГА-ПРОДАЮЩИЙ ЛЕНДИНГ v4 (i18n RU/UZ + Telegram Bot)
  * Design: Dark Cyber Tech — #050D1A bg, neon cyan accents, yellow CTAs
- * All 34+ audit issues resolved
+ * Languages: Russian (default) + Uzbek with toggle switcher
+ * All CTA → https://t.me/mideazubot
  */
 import { useState, useEffect, useRef, type FormEvent } from "react";
 import { motion, useInView, AnimatePresence } from "framer-motion";
@@ -9,8 +10,9 @@ import {
   Snowflake, Wifi, Volume2, Shield, Zap, Brain, Phone, Clock,
   ChevronDown, Star, Check, X, Truck, Wrench, FileText,
   MessageCircle, ThermometerSun, BatteryCharging, Timer, Send,
-  ArrowDown, Sparkles
+  ArrowDown, Sparkles, Globe
 } from "lucide-react";
+import { type Lang, translations as T, t } from "@/lib/i18n";
 
 // ── CDN URLs ─────────────────────────────────────────────────────────────────
 const IMG = {
@@ -27,16 +29,18 @@ const IMG = {
   lifestyle: "https://d2xsxph8kpxj0f.cloudfront.net/310519663532358315/Pvyt7qa76fQ9ttQfPKguuc/v2_creative_5_lifestyle_881041a6.webp",
 };
 
-const TELEGRAM_LINK = "https://t.me/welkin_midea";
+// ── All CTA links now point to the Telegram bot ──
+const TELEGRAM_BOT = "https://t.me/mideazubot";
 const INSTAGRAM_LINK = "https://instagram.com/welkin.midea";
 const PHONE = "+998 99 892 36 02";
 const PHONE_HREF = "tel:+998998923602";
+const WHATSAPP_LINK = "https://wa.me/998998923602";
 
 function scrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
 }
 
-// ── Animated counter (shows final value immediately when in view) ────────────
+// ── Animated counter ────────────────────────────────────────────────────────
 function Counter({ end, suffix = "", prefix = "", duration = 2000 }: { end: number; suffix?: string; prefix?: string; duration?: number }) {
   const [count, setCount] = useState(0);
   const [done, setDone] = useState(false);
@@ -65,10 +69,10 @@ function Counter({ end, suffix = "", prefix = "", duration = 2000 }: { end: numb
 }
 
 // ── Countdown timer ──────────────────────────────────────────────────────────
-function Countdown() {
+function Countdown({ lang }: { lang: Lang }) {
   const [time, setTime] = useState({ h: 23, m: 47, s: 12 });
   useEffect(() => {
-    const t = setInterval(() => {
+    const timer = setInterval(() => {
       setTime(prev => {
         let { h, m, s } = prev;
         s--;
@@ -78,17 +82,18 @@ function Countdown() {
         return { h, m, s };
       });
     }, 1000);
-    return () => clearInterval(t);
+    return () => clearInterval(timer);
   }, []);
 
   const pad = (n: number) => String(n).padStart(2, "0");
+  const labels = [
+    { val: pad(time.h), label: t(T.hero.countdownH, lang) },
+    { val: pad(time.m), label: t(T.hero.countdownM, lang) },
+    { val: pad(time.s), label: t(T.hero.countdownS, lang) },
+  ];
   return (
     <div className="flex items-center gap-1.5 sm:gap-2">
-      {[
-        { val: pad(time.h), label: "ч" },
-        { val: pad(time.m), label: "м" },
-        { val: pad(time.s), label: "с" },
-      ].map((item, i) => (
+      {labels.map((item, i) => (
         <div key={i} className="flex items-center gap-1.5 sm:gap-2">
           <div className="flex flex-col items-center">
             <span className="font-bebas text-2xl sm:text-4xl text-white bg-white/10 backdrop-blur-sm rounded-lg px-2.5 sm:px-3.5 py-1 border border-cyan-500/30 min-w-[2.5rem] sm:min-w-[3.5rem] text-center tabular-nums">
@@ -104,25 +109,49 @@ function Countdown() {
 }
 
 // ── Pulsing CTA button ───────────────────────────────────────────────────────
-function PulseCTA({ text, onClick, size = "lg", className = "" }: { text: string; onClick: () => void; size?: "lg" | "md" | "sm"; className?: string }) {
+function PulseCTA({ text, onClick, href, size = "lg", className = "" }: { text: string; onClick?: () => void; href?: string; size?: "lg" | "md" | "sm"; className?: string }) {
   const sizes = {
     lg: "text-xl sm:text-2xl px-10 sm:px-16 py-4 sm:py-5",
     md: "text-base sm:text-xl px-6 sm:px-10 py-3 sm:py-4",
     sm: "text-sm sm:text-base px-4 sm:px-6 py-2 sm:py-2.5",
   };
-  return (
-    <motion.button
-      onClick={onClick}
-      className={`relative font-bebas font-bold text-black rounded-xl bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 shadow-[0_0_30px_rgba(250,204,21,0.4)] hover:shadow-[0_0_50px_rgba(250,204,21,0.6)] transition-all ${sizes[size]} ${className}`}
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.97 }}
-    >
+
+  const inner = (
+    <>
       <span className="relative z-10">{text}</span>
       <motion.div
         className="absolute inset-0 rounded-xl bg-yellow-400/30"
         animate={{ scale: [1, 1.15, 1], opacity: [0.5, 0, 0.5] }}
         transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
       />
+    </>
+  );
+
+  const cls = `relative font-bebas font-bold text-black rounded-xl bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 shadow-[0_0_30px_rgba(250,204,21,0.4)] hover:shadow-[0_0_50px_rgba(250,204,21,0.6)] transition-all ${sizes[size]} ${className}`;
+
+  if (href) {
+    return (
+      <motion.a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`${cls} inline-flex items-center justify-center text-center`}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.97 }}
+      >
+        {inner}
+      </motion.a>
+    );
+  }
+
+  return (
+    <motion.button
+      onClick={onClick}
+      className={cls}
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.97 }}
+    >
+      {inner}
     </motion.button>
   );
 }
@@ -174,15 +203,55 @@ function FaqItem({ q, a, icon }: { q: string; a: string; icon: React.ReactNode }
   );
 }
 
+// ── Language Switcher ────────────────────────────────────────────────────────
+function LangSwitch({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }) {
+  return (
+    <div className="flex items-center bg-white/5 border border-cyan-900/40 rounded-lg overflow-hidden">
+      <button
+        onClick={() => setLang("ru")}
+        className={`px-2.5 py-1.5 text-xs font-montserrat font-bold transition-all ${
+          lang === "ru"
+            ? "bg-cyan-500/20 text-cyan-400 border-r border-cyan-500/30"
+            : "text-gray-500 hover:text-gray-300 border-r border-cyan-900/20"
+        }`}
+      >
+        RU
+      </button>
+      <button
+        onClick={() => setLang("uz")}
+        className={`px-2.5 py-1.5 text-xs font-montserrat font-bold transition-all ${
+          lang === "uz"
+            ? "bg-cyan-500/20 text-cyan-400"
+            : "text-gray-500 hover:text-gray-300"
+        }`}
+      >
+        UZ
+      </button>
+    </div>
+  );
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // MAIN PAGE
 // ══════════════════════════════════════════════════════════════════════════════
 export default function Home() {
+  const [lang, setLang] = useState<Lang>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("midea-lang");
+      if (saved === "uz" || saved === "ru") return saved;
+    }
+    return "ru";
+  });
   const [formName, setFormName] = useState("");
   const [formPhone, setFormPhone] = useState("");
   const [formSent, setFormSent] = useState(false);
   const [showSticky, setShowSticky] = useState(false);
   const [stock] = useState(47);
+
+  // Persist language choice
+  useEffect(() => {
+    localStorage.setItem("midea-lang", lang);
+  }, [lang]);
 
   useEffect(() => {
     const onScroll = () => setShowSticky(window.scrollY > 700);
@@ -194,14 +263,62 @@ export default function Home() {
     e.preventDefault();
     const phoneDigits = formPhone.replace(/\D/g, "");
     if (!formName.trim() || phoneDigits.length < 9) {
-      alert(formName.trim() ? "Введите корректный номер телефона" : "Введите ваше имя");
+      alert(formName.trim() ? t(T.pricing.alertPhone, lang) : t(T.pricing.alertName, lang));
       return;
     }
+    // Open Telegram bot with pre-filled message
+    const msg = encodeURIComponent(
+      lang === "ru"
+        ? `Здравствуйте! Меня зовут ${formName.trim()}, мой номер: ${formPhone}. Хочу узнать про Midea ALBA.`
+        : `Assalomu alaykum! Mening ismim ${formName.trim()}, raqamim: ${formPhone}. Midea ALBA haqida bilmoqchiman.`
+    );
+    window.open(`${TELEGRAM_BOT}?text=${msg}`, "_blank");
     setFormSent(true);
     setTimeout(() => setFormSent(false), 5000);
     setFormName("");
     setFormPhone("");
   };
+
+  // Pain point icons (same for both languages)
+  const painIcons = [
+    { icon: <Volume2 className="w-6 h-6" />, borderColor: "border-red-500/30 hover:border-red-400", iconBg: "bg-red-500/15 text-red-400" },
+    { icon: <Zap className="w-6 h-6" />, borderColor: "border-orange-500/30 hover:border-orange-400", iconBg: "bg-orange-500/15 text-orange-400" },
+    { icon: <Wifi className="w-6 h-6" />, borderColor: "border-blue-500/30 hover:border-blue-400", iconBg: "bg-blue-500/15 text-blue-400" },
+    { icon: <ThermometerSun className="w-6 h-6" />, borderColor: "border-yellow-500/30 hover:border-yellow-400", iconBg: "bg-yellow-500/15 text-yellow-400" },
+    { icon: <Shield className="w-6 h-6" />, borderColor: "border-purple-500/30 hover:border-purple-400", iconBg: "bg-purple-500/15 text-purple-400" },
+    { icon: <Snowflake className="w-6 h-6" />, borderColor: "border-teal-500/30 hover:border-teal-400", iconBg: "bg-teal-500/15 text-teal-400" },
+  ];
+
+  // Feature images
+  const featureImgs = [IMG.robotAi, IMG.wifiControl, IMG.soundWave, IMG.speedometer, IMG.moneyTree, IMG.lifestyle];
+
+  // Review colors
+  const reviewColors = [
+    "from-cyan-500 to-blue-600",
+    "from-pink-500 to-rose-600",
+    "from-green-500 to-emerald-600",
+    "from-yellow-500 to-amber-600",
+    "from-indigo-500 to-violet-600",
+    "from-rose-500 to-red-600",
+  ];
+
+  // FAQ icons
+  const faqIcons = [
+    <Wrench className="w-5 h-5" />,
+    <FileText className="w-5 h-5" />,
+    <Shield className="w-5 h-5" />,
+    <Truck className="w-5 h-5" />,
+    <Zap className="w-5 h-5" />,
+    <Timer className="w-5 h-5" />,
+  ];
+
+  // Number stats config
+  const numberStats = [
+    { end: 360, prefix: "", suffix: "$", color: "text-yellow-400", borderColor: "border-yellow-500/20 hover:border-yellow-500/50", icon: <Sparkles className="w-6 h-6 text-yellow-400" /> },
+    { end: 19, prefix: "", suffix: " дБ", color: "text-cyan-400", borderColor: "border-cyan-500/20 hover:border-cyan-500/50", icon: <Volume2 className="w-6 h-6 text-cyan-400" /> },
+    { end: 60, prefix: "-", suffix: "%", color: "text-green-400", borderColor: "border-green-500/20 hover:border-green-500/50", icon: <BatteryCharging className="w-6 h-6 text-green-400" /> },
+    { end: 200, prefix: "", suffix: "$/год", color: "text-emerald-400", borderColor: "border-emerald-500/20 hover:border-emerald-500/50", icon: <Zap className="w-6 h-6 text-emerald-400" /> },
+  ];
 
   return (
     <div className="min-h-screen bg-[#050D1A] text-white overflow-x-hidden">
@@ -218,15 +335,18 @@ export default function Home() {
             <a href={PHONE_HREF} className="flex items-center gap-2 text-sm text-gray-300 hover:text-cyan-400 transition-colors">
               <Phone className="w-4 h-4" /> {PHONE}
             </a>
-            <a href={TELEGRAM_LINK} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-gray-300 hover:text-cyan-400 transition-colors">
+            <a href={TELEGRAM_BOT} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-gray-300 hover:text-cyan-400 transition-colors">
               <MessageCircle className="w-4 h-4" /> Telegram
             </a>
           </div>
-          {/* Mobile phone icon */}
-          <a href={PHONE_HREF} className="md:hidden shrink-0 w-9 h-9 rounded-lg bg-green-600/20 border border-green-500/30 flex items-center justify-center text-green-400 hover:bg-green-600/30 transition-all">
-            <Phone className="w-4 h-4" />
-          </a>
-          <PulseCTA text="КУПИТЬ ЗА 360$" onClick={() => scrollTo("lead-form")} size="sm" />
+          <div className="flex items-center gap-2 sm:gap-3">
+            <LangSwitch lang={lang} setLang={setLang} />
+            {/* Mobile phone icon */}
+            <a href={PHONE_HREF} className="md:hidden shrink-0 w-9 h-9 rounded-lg bg-green-600/20 border border-green-500/30 flex items-center justify-center text-green-400 hover:bg-green-600/30 transition-all">
+              <Phone className="w-4 h-4" />
+            </a>
+            <PulseCTA text={t(T.header.buyBtn, lang)} href={TELEGRAM_BOT} size="sm" className="hidden sm:inline-flex" />
+          </div>
         </div>
       </header>
 
@@ -246,21 +366,27 @@ export default function Home() {
             >
               <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
               <span className="text-red-400 font-montserrat font-bold text-xs sm:text-sm uppercase tracking-wide">
-                Акция — осталось {stock} штук
+                {t(T.hero.urgencyBadge, lang)} {stock} {t(T.hero.urgencySuffix, lang)}
               </span>
             </motion.div>
 
             {/* Headline */}
             <h1 className="font-bebas leading-[0.9] tracking-tight">
-              <span className="block text-4xl sm:text-6xl lg:text-7xl text-white">+45°C НА УЛИЦЕ?</span>
-              <span className="block text-5xl sm:text-7xl lg:text-[5.5rem] text-cyan-400 neon-cyan">+22°C ДОМА</span>
-              <span className="block text-4xl sm:text-6xl lg:text-7xl text-white">ЗА <span className="text-yellow-400">3 МИНУТЫ</span></span>
+              <span className="block text-4xl sm:text-6xl lg:text-7xl text-white">{t(T.hero.headline1, lang)}</span>
+              <span className="block text-5xl sm:text-7xl lg:text-[5.5rem] text-cyan-400 neon-cyan">{t(T.hero.headline2, lang)}</span>
+              <span className="block text-4xl sm:text-6xl lg:text-7xl text-white">
+                {t(T.hero.headline3prefix, lang)}<span className="text-yellow-400">{t(T.hero.headline3highlight, lang)}</span>
+              </span>
             </h1>
 
             {/* Subheadline */}
             <p className="font-montserrat text-sm sm:text-lg text-gray-300 max-w-lg leading-relaxed">
-              <span className="text-white font-bold">Midea ALBA</span> — AI-кондиционер, который работает <span className="text-cyan-400 font-semibold">тише шёпота</span>,
-              экономит <span className="text-yellow-400 font-bold">200$/год</span> и управляется с телефона
+              <span className="text-white font-bold">{t(T.hero.subheadName, lang)}</span>
+              {t(T.hero.subheadText, lang)}
+              <span className="text-cyan-400 font-semibold">{t(T.hero.subheadQuiet, lang)}</span>,{" "}
+              {t(T.hero.subheadSavesPrefix, lang)}
+              <span className="text-yellow-400 font-bold">{t(T.hero.subheadSaves, lang)}</span>
+              {t(T.hero.subheadSuffix, lang)}
             </p>
 
             {/* Social proof */}
@@ -277,7 +403,7 @@ export default function Home() {
                   {[...Array(5)].map((_, i) => <Star key={i} className="w-3.5 h-3.5 fill-yellow-400" />)}
                   <span className="text-white ml-1 font-bold">4.9</span>
                 </div>
-                <span className="text-gray-400 text-xs">500+ довольных клиентов</span>
+                <span className="text-gray-400 text-xs">{t(T.hero.socialProof, lang)}</span>
               </div>
             </div>
 
@@ -290,23 +416,23 @@ export default function Home() {
 
             {/* CTA */}
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-              <PulseCTA text="КУПИТЬ ЗА 360$" onClick={() => scrollTo("lead-form")} size="lg" />
+              <PulseCTA text={t(T.hero.ctaBuy, lang)} href={TELEGRAM_BOT} size="lg" />
               <a
-                href={TELEGRAM_LINK}
+                href={TELEGRAM_BOT}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-bebas text-lg sm:text-xl px-6 sm:px-8 py-3 sm:py-4 rounded-xl bg-[#0088cc] text-white hover:bg-[#0099dd] transition-all text-center flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(0,136,204,0.3)]"
               >
                 <MessageCircle className="w-5 h-5" />
-                НАПИСАТЬ В TELEGRAM
+                {t(T.hero.ctaTelegram, lang)}
               </a>
             </div>
 
             {/* Trust badges */}
             <div className="flex flex-wrap gap-3 sm:gap-5 text-xs sm:text-sm text-gray-400">
-              <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-green-400" /> Бесплатная установка</span>
-              <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-green-400" /> Гарантия 3 года</span>
-              <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-green-400" /> Рассрочка 0%</span>
+              <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-green-400" /> {t(T.hero.trustInstall, lang)}</span>
+              <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-green-400" /> {t(T.hero.trustWarranty, lang)}</span>
+              <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-green-400" /> {t(T.hero.trustInstallment, lang)}</span>
             </div>
           </div>
 
@@ -345,9 +471,9 @@ export default function Home() {
             <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-5">
               <div className="flex items-center gap-2 text-sm text-gray-400">
                 <Clock className="w-4 h-4 text-red-400 animate-pulse" />
-                <span className="font-montserrat">Акция заканчивается через:</span>
+                <span className="font-montserrat">{t(T.hero.countdownLabel, lang)}</span>
               </div>
-              <Countdown />
+              <Countdown lang={lang} />
             </div>
           </div>
         </div>
@@ -366,37 +492,32 @@ export default function Home() {
       <Section id="pains" className="py-16 sm:py-24 bg-[#050D1A]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-10 sm:mb-16">
-            <h2 className="font-bebas text-4xl sm:text-6xl lg:text-7xl text-white">УЗНАЁШЬ <span className="text-red-500">СЕБЯ</span>?</h2>
-            <p className="font-montserrat text-gray-400 mt-2 sm:mt-3 text-sm sm:text-lg max-w-2xl mx-auto">Эти проблемы знакомы каждому владельцу обычного кондиционера</p>
+            <h2 className="font-bebas text-4xl sm:text-6xl lg:text-7xl text-white">
+              {t(T.pains.title, lang)}<span className="text-red-500">{t(T.pains.titleHighlight, lang)}</span>{t(T.pains.titleEnd, lang)}
+            </h2>
+            <p className="font-montserrat text-gray-400 mt-2 sm:mt-3 text-sm sm:text-lg max-w-2xl mx-auto">{t(T.pains.subtitle, lang)}</p>
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-            {[
-              { icon: <Volume2 className="w-6 h-6" />, pain: "Кондей шумит как трактор", detail: "Невозможно спать, дети просыпаются", solution: "ALBA — всего 19 дБ, тише шёпота", borderColor: "border-red-500/30 hover:border-red-400", iconBg: "bg-red-500/15 text-red-400" },
-              { icon: <Zap className="w-6 h-6" />, pain: "Счёт за свет вырос в 2 раза", detail: "Кондиционер жрёт электричество", solution: "AI EcoMaster экономит до 60%", borderColor: "border-orange-500/30 hover:border-orange-400", iconBg: "bg-orange-500/15 text-orange-400" },
-              { icon: <Wifi className="w-6 h-6" />, pain: "Нельзя включить до прихода домой", detail: "Приходишь в раскалённую квартиру", solution: "Wi-Fi управление с телефона", borderColor: "border-blue-500/30 hover:border-blue-400", iconBg: "bg-blue-500/15 text-blue-400" },
-              { icon: <ThermometerSun className="w-6 h-6" />, pain: "+45°C, а кондей охлаждает 20 мин", detail: "Пока остынет — уже вспотел", solution: "ALBA охлаждает за 3 минуты!", borderColor: "border-yellow-500/30 hover:border-yellow-400", iconBg: "bg-yellow-500/15 text-yellow-400" },
-              { icon: <Shield className="w-6 h-6" />, pain: "Скачки напряжения сожгли кондей", detail: "Ремонт стоил дороже нового", solution: "Prime Guard — защита от 145V", borderColor: "border-purple-500/30 hover:border-purple-400", iconBg: "bg-purple-500/15 text-purple-400" },
-              { icon: <Snowflake className="w-6 h-6" />, pain: "Температура скачет ±3°C", detail: "То жарко, то холодно — нестабильно", solution: "Точность ±0.5°C — AI держит климат", borderColor: "border-teal-500/30 hover:border-teal-400", iconBg: "bg-teal-500/15 text-teal-400" },
-            ].map((item, i) => (
+            {T.pains.items.map((item, i) => (
               <motion.div
                 key={i}
-                className={`relative rounded-2xl border ${item.borderColor} bg-[#0a1628]/60 p-5 sm:p-6 transition-all duration-300 group`}
+                className={`relative rounded-2xl border ${painIcons[i].borderColor} bg-[#0a1628]/60 p-5 sm:p-6 transition-all duration-300 group`}
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.08 }}
                 whileHover={{ y: -4, scale: 1.02 }}
               >
-                <div className={`w-12 h-12 rounded-xl ${item.iconBg} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-                  {item.icon}
+                <div className={`w-12 h-12 rounded-xl ${painIcons[i].iconBg} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+                  {painIcons[i].icon}
                 </div>
-                <p className="font-montserrat font-bold text-white text-base sm:text-lg">{item.pain}</p>
-                <p className="font-montserrat text-gray-500 text-sm mt-1">{item.detail}</p>
+                <p className="font-montserrat font-bold text-white text-base sm:text-lg">{t(item.pain, lang)}</p>
+                <p className="font-montserrat text-gray-500 text-sm mt-1">{t(item.detail, lang)}</p>
                 <div className="mt-4 pt-3 border-t border-white/5">
                   <p className="font-montserrat font-bold text-sm text-green-400 flex items-center gap-2">
                     <Check className="w-4 h-4 shrink-0" />
-                    {item.solution}
+                    {t(item.solution, lang)}
                   </p>
                 </div>
               </motion.div>
@@ -405,8 +526,8 @@ export default function Home() {
 
           {/* CTA after pains */}
           <div className="text-center mt-10 sm:mt-14">
-            <p className="font-montserrat text-gray-400 text-sm sm:text-base mb-4">Хватит мучиться — есть решение!</p>
-            <PulseCTA text="РЕШИТЬ ВСЕ ПРОБЛЕМЫ ЗА 360$" onClick={() => scrollTo("lead-form")} size="md" />
+            <p className="font-montserrat text-gray-400 text-sm sm:text-base mb-4">{t(T.pains.ctaText, lang)}</p>
+            <PulseCTA text={t(T.pains.ctaBtn, lang)} href={TELEGRAM_BOT} size="md" />
           </div>
         </div>
       </Section>
@@ -415,12 +536,7 @@ export default function Home() {
       <Section className="py-14 sm:py-20 bg-gradient-to-b from-[#050D1A] via-[#081525] to-[#050D1A]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-            {[
-              { end: 360, prefix: "", suffix: "$", label: "Цена вместо 450$", color: "text-yellow-400", borderColor: "border-yellow-500/20 hover:border-yellow-500/50", icon: <Sparkles className="w-6 h-6 text-yellow-400" /> },
-              { end: 19, prefix: "", suffix: " дБ", label: "Тише шёпота", color: "text-cyan-400", borderColor: "border-cyan-500/20 hover:border-cyan-500/50", icon: <Volume2 className="w-6 h-6 text-cyan-400" /> },
-              { end: 60, prefix: "-", suffix: "%", label: "Экономия электричества", color: "text-green-400", borderColor: "border-green-500/20 hover:border-green-500/50", icon: <BatteryCharging className="w-6 h-6 text-green-400" /> },
-              { end: 200, prefix: "", suffix: "$/год", label: "Экономия на счетах", color: "text-emerald-400", borderColor: "border-emerald-500/20 hover:border-emerald-500/50", icon: <Zap className="w-6 h-6 text-emerald-400" /> },
-            ].map((item, i) => (
+            {numberStats.map((item, i) => (
               <motion.div
                 key={i}
                 className={`text-center p-4 sm:p-7 rounded-2xl bg-[#0a1628]/60 border ${item.borderColor} transition-all duration-300`}
@@ -434,7 +550,7 @@ export default function Home() {
                 <div className={`font-bebas text-3xl sm:text-5xl lg:text-6xl ${item.color}`}>
                   <Counter end={item.end} prefix={item.prefix} suffix={item.suffix} />
                 </div>
-                <p className="font-montserrat text-gray-400 text-xs sm:text-sm mt-1 sm:mt-2">{item.label}</p>
+                <p className="font-montserrat text-gray-400 text-xs sm:text-sm mt-1 sm:mt-2">{t(T.numbers.items[i].label, lang)}</p>
               </motion.div>
             ))}
           </div>
@@ -445,19 +561,14 @@ export default function Home() {
       <Section className="py-14 sm:py-20 bg-[#050D1A]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-10 sm:mb-14">
-            <h2 className="font-bebas text-4xl sm:text-6xl lg:text-7xl text-white">6 ПРИЧИН <span className="text-cyan-400">ВЫБРАТЬ ALBA</span></h2>
-            <p className="font-montserrat text-gray-400 mt-2 text-sm sm:text-lg">Технологии, которые меняют ваш комфорт навсегда</p>
+            <h2 className="font-bebas text-4xl sm:text-6xl lg:text-7xl text-white">
+              {t(T.features.title, lang)}<span className="text-cyan-400">{t(T.features.titleHighlight, lang)}</span>
+            </h2>
+            <p className="font-montserrat text-gray-400 mt-2 text-sm sm:text-lg">{t(T.features.subtitle, lang)}</p>
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-            {[
-              { img: IMG.robotAi, title: "AI ECOMASTER", desc: "ИИ анализирует температуру, влажность и активность", highlight: "Экономия до 60% на электричестве" },
-              { img: IMG.wifiControl, title: "WI-FI УПРАВЛЕНИЕ", desc: "Управляй с телефона из любой точки мира", highlight: "Включай за 30 мин до прихода" },
-              { img: IMG.soundWave, title: "19 ДБ ТИШИНА", desc: "Тише шёпота — для спальни и детской", highlight: "Обычный кондей — 45 дБ" },
-              { img: IMG.speedometer, title: "ОХЛАЖДАЕТ ЗА 3 МИН", desc: "Turbo Cool: с +45°C до +22°C мгновенно", highlight: "Точность температуры ±0.5°C" },
-              { img: IMG.moneyTree, title: "ЭКОНОМИТ 200$/ГОД", desc: "Инвертор + AI = минимальный расход", highlight: "Окупается за 1.5 года" },
-              { img: IMG.lifestyle, title: "PRIME GUARD", desc: "Защита от скачков — работает от 145V", highlight: "Гарантия 3 года на всё" },
-            ].map((card, i) => (
+            {T.features.items.map((card, i) => (
               <motion.div
                 key={i}
                 className="group relative rounded-2xl overflow-hidden border border-cyan-900/30 hover:border-cyan-500/40 transition-all duration-500 bg-[#0a1628]"
@@ -468,16 +579,16 @@ export default function Home() {
                 whileHover={{ y: -5 }}
               >
                 <div className="relative aspect-square overflow-hidden">
-                  <img src={card.img} alt={card.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" loading="lazy" />
+                  <img src={featureImgs[i]} alt={t(card.title, lang)} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" loading="lazy" />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#0a1628] via-[#0a1628]/30 to-transparent" />
                   <div className="absolute bottom-3 left-4 right-4">
-                    <h3 className="font-bebas text-xl sm:text-2xl text-cyan-400 drop-shadow-lg">{card.title}</h3>
+                    <h3 className="font-bebas text-xl sm:text-2xl text-cyan-400 drop-shadow-lg">{t(card.title, lang)}</h3>
                   </div>
                 </div>
                 <div className="p-4 sm:p-5">
-                  <p className="font-montserrat text-gray-300 text-xs sm:text-sm leading-relaxed">{card.desc}</p>
+                  <p className="font-montserrat text-gray-300 text-xs sm:text-sm leading-relaxed">{t(card.desc, lang)}</p>
                   <p className="font-montserrat text-green-400 text-xs sm:text-sm font-bold mt-2 flex items-center gap-1.5">
-                    <Check className="w-4 h-4 shrink-0" />{card.highlight}
+                    <Check className="w-4 h-4 shrink-0" />{t(card.highlight, lang)}
                   </p>
                 </div>
               </motion.div>
@@ -490,42 +601,33 @@ export default function Home() {
       <Section id="comparison" className="py-14 sm:py-20 bg-gradient-to-b from-[#050D1A] via-[#081525] to-[#050D1A]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
           <h2 className="font-bebas text-4xl sm:text-6xl lg:text-7xl text-center mb-10 sm:mb-14">
-            ALBA VS <span className="text-red-500">ОБЫЧНЫЙ КОНДЕЙ</span>
+            {t(T.comparison.title, lang)}<span className="text-red-500">{t(T.comparison.titleHighlight, lang)}</span>
           </h2>
 
           <div className="rounded-2xl border border-cyan-900/30 overflow-hidden bg-[#0a1628]/60">
             {/* Header */}
             <div className="grid grid-cols-3 bg-[#0a1628] border-b border-cyan-900/30">
-              <div className="p-3 sm:p-4 font-montserrat font-bold text-gray-400 text-xs sm:text-sm">Параметр</div>
-              <div className="p-3 sm:p-4 font-montserrat font-bold text-red-400 text-xs sm:text-sm text-center">Обычный</div>
-              <div className="p-3 sm:p-4 font-montserrat font-bold text-cyan-400 text-xs sm:text-sm text-center bg-cyan-500/5">MIDEA ALBA</div>
+              <div className="p-3 sm:p-4 font-montserrat font-bold text-gray-400 text-xs sm:text-sm">{t(T.comparison.headerParam, lang)}</div>
+              <div className="p-3 sm:p-4 font-montserrat font-bold text-red-400 text-xs sm:text-sm text-center">{t(T.comparison.headerBad, lang)}</div>
+              <div className="p-3 sm:p-4 font-montserrat font-bold text-cyan-400 text-xs sm:text-sm text-center bg-cyan-500/5">{t(T.comparison.headerGood, lang)}</div>
             </div>
-            {[
-              { param: "Шум", bad: "45 дБ", good: "19 дБ" },
-              { param: "Управление", bad: "Только пульт", good: "Wi-Fi + голос + приложение" },
-              { param: "Экономия", bad: "Обычный компрессор", good: "AI EcoMaster -60%" },
-              { param: "Защита", bad: "Нет защиты", good: "Prime Guard от 145V" },
-              { param: "Охлаждение", bad: "15-20 минут", good: "3 минуты" },
-              { param: "Температура", bad: "±3°C скачки", good: "±0.5°C точность" },
-              { param: "Рассрочка", bad: "Нет", good: "0% на 12 месяцев" },
-              { param: "Цена", bad: "350-500$", good: "360$ (было 450$)" },
-            ].map((row, i) => (
+            {T.comparison.rows.map((row, i) => (
               <div key={i} className={`grid grid-cols-3 ${i % 2 === 0 ? "bg-white/[0.02]" : ""} border-b border-cyan-900/10 last:border-b-0`}>
-                <div className="p-3 sm:p-4 font-montserrat font-semibold text-white text-xs sm:text-sm flex items-center">{row.param}</div>
+                <div className="p-3 sm:p-4 font-montserrat font-semibold text-white text-xs sm:text-sm flex items-center">{t(row.param, lang)}</div>
                 <div className="p-3 sm:p-4 font-montserrat text-xs sm:text-sm text-center flex items-center justify-center gap-1 text-red-400/80">
                   <X className="w-3.5 h-3.5 shrink-0 text-red-500" />
-                  <span>{row.bad}</span>
+                  <span>{t(row.bad, lang)}</span>
                 </div>
                 <div className="p-3 sm:p-4 font-montserrat text-xs sm:text-sm text-center flex items-center justify-center gap-1 text-green-400 font-semibold bg-cyan-500/5">
                   <Check className="w-3.5 h-3.5 shrink-0 text-green-500" />
-                  <span>{row.good}</span>
+                  <span>{t(row.good, lang)}</span>
                 </div>
               </div>
             ))}
           </div>
 
           <div className="text-center mt-8">
-            <PulseCTA text="ВЫБРАТЬ ALBA — 360$" onClick={() => scrollTo("lead-form")} size="md" />
+            <PulseCTA text={t(T.comparison.ctaBtn, lang)} href={TELEGRAM_BOT} size="md" />
           </div>
         </div>
       </Section>
@@ -534,25 +636,20 @@ export default function Home() {
       <Section className="py-14 sm:py-20 bg-[#050D1A]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-10 sm:mb-14">
-            <h2 className="font-bebas text-4xl sm:text-6xl lg:text-7xl text-white">ЧТО ГОВОРЯТ <span className="text-cyan-400">КЛИЕНТЫ</span></h2>
+            <h2 className="font-bebas text-4xl sm:text-6xl lg:text-7xl text-white">
+              {t(T.reviews.title, lang)}<span className="text-cyan-400">{t(T.reviews.titleHighlight, lang)}</span>
+            </h2>
             <div className="flex items-center justify-center gap-2 mt-3">
               <div className="flex gap-0.5">
                 {[...Array(5)].map((_, i) => <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />)}
               </div>
               <span className="font-montserrat text-white font-bold">4.9</span>
-              <span className="font-montserrat text-gray-400 text-sm">— 500+ отзывов</span>
+              <span className="font-montserrat text-gray-400 text-sm">{t(T.reviews.ratingText, lang)}</span>
             </div>
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-            {[
-              { name: "Акбар Рашидов", loc: "Юнусабад", text: "Купил месяц назад — счёт за свет реально снизился. Жена довольна — тихо работает, не мешает спать.", rating: 5, color: "from-cyan-500 to-blue-600" },
-              { name: "Дилноза Каримова", loc: "Мирзо-Улугбек", text: "Управляю с телефона — это космос! Включаю за 20 минут до прихода. Дети в детской спят отлично.", rating: 5, color: "from-pink-500 to-rose-600" },
-              { name: "Бахром Усманов", loc: "Чиланзар", text: "У нас напряжение скачет — старый кондей сгорел. ALBA работает без проблем уже 3 месяца.", rating: 5, color: "from-green-500 to-emerald-600" },
-              { name: "Малика Юсупова", loc: "Сергели", text: "Охлаждает очень быстро. Жара +45, а дома +22 через 5 минут. Установщики приехали в тот же день!", rating: 5, color: "from-yellow-500 to-amber-600" },
-              { name: "Санжар Тошматов", loc: "Бектемир", text: "Взял в рассрочку 0%. Переплаты нет. Кондей отличный — тихий, умный, красивый.", rating: 5, color: "from-indigo-500 to-violet-600" },
-              { name: "Гульнора Хасанова", loc: "Яккасарай", text: "Муж скептически относился к 'умному' кондею. Теперь сам управляет с телефона и хвастается перед друзьями!", rating: 5, color: "from-rose-500 to-red-600" },
-            ].map((review, i) => (
+            {T.reviews.items.map((review, i) => (
               <motion.div
                 key={i}
                 className="rounded-2xl border border-cyan-900/30 bg-[#0a1628]/60 p-5 sm:p-6 hover:border-cyan-500/30 transition-all"
@@ -563,17 +660,19 @@ export default function Home() {
               >
                 <div className="flex items-center gap-1 mb-3">
                   {[...Array(5)].map((_, j) => (
-                    <Star key={j} className={`w-4 h-4 ${j < review.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-600"}`} />
+                    <Star key={j} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                   ))}
                 </div>
-                <p className="font-montserrat text-gray-300 text-sm leading-relaxed">"{review.text}"</p>
+                <p className="font-montserrat text-gray-300 text-sm leading-relaxed">"{t(review.text, lang)}"</p>
                 <div className="flex items-center gap-3 mt-4 pt-4 border-t border-white/5">
-                  <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${review.color} flex items-center justify-center font-bold text-sm text-white shrink-0`}>
-                    {review.name[0]}
+                  <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${reviewColors[i]} flex items-center justify-center font-bold text-sm text-white shrink-0`}>
+                    {t(review.name, lang)[0]}
                   </div>
                   <div>
-                    <p className="font-montserrat font-bold text-white text-sm">{review.name}</p>
-                    <p className="font-montserrat text-gray-500 text-xs">Ташкент, {review.loc}</p>
+                    <p className="font-montserrat font-bold text-white text-sm">{t(review.name, lang)}</p>
+                    <p className="font-montserrat text-gray-500 text-xs">
+                      {lang === "ru" ? "Ташкент" : "Toshkent"}, {t(review.loc, lang)}
+                    </p>
                   </div>
                 </div>
               </motion.div>
@@ -593,7 +692,7 @@ export default function Home() {
           >
             <span className="inline-flex items-center gap-2 bg-red-600/20 border border-red-500/40 rounded-full px-5 py-2 font-montserrat font-bold text-red-400 text-sm sm:text-base">
               <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
-              СПЕЦИАЛЬНАЯ ЦЕНА — ОСТАЛОСЬ {stock} ШТУК
+              {t(T.pricing.urgency, lang)} {stock} {t(T.pricing.urgencySuffix, lang)}
             </span>
           </motion.div>
 
@@ -615,9 +714,9 @@ export default function Home() {
               {/* Bonuses */}
               <div className="space-y-3 mb-6">
                 {[
-                  { icon: <Truck className="w-5 h-5 text-cyan-400" />, title: "Бесплатная доставка", desc: "По всему Ташкенту" },
-                  { icon: <Wrench className="w-5 h-5 text-cyan-400" />, title: "Бесплатная установка", desc: "Мастер в тот же день" },
-                  { icon: <FileText className="w-5 h-5 text-cyan-400" />, title: "Гарантия 3 года", desc: "Официальная Midea" },
+                  { icon: <Truck className="w-5 h-5 text-cyan-400" />, title: t(T.pricing.deliveryTitle, lang), desc: t(T.pricing.deliveryDesc, lang) },
+                  { icon: <Wrench className="w-5 h-5 text-cyan-400" />, title: t(T.pricing.installTitle, lang), desc: t(T.pricing.installDesc, lang) },
+                  { icon: <FileText className="w-5 h-5 text-cyan-400" />, title: t(T.pricing.warrantyTitle, lang), desc: t(T.pricing.warrantyDesc, lang) },
                 ].map((bonus, i) => (
                   <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-cyan-900/20">
                     <div className="shrink-0 w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center">{bonus.icon}</div>
@@ -632,9 +731,9 @@ export default function Home() {
               {/* Installment */}
               <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/30 text-center">
                 <p className="font-montserrat font-bold text-green-400 text-base sm:text-lg">
-                  Рассрочка 0% — всего 30$/мес
+                  {t(T.pricing.installmentMain, lang)}
                 </p>
-                <p className="font-montserrat text-gray-400 text-xs mt-1">12 месяцев без переплаты</p>
+                <p className="font-montserrat text-gray-400 text-xs mt-1">{t(T.pricing.installmentSub, lang)}</p>
               </div>
             </div>
 
@@ -643,34 +742,33 @@ export default function Home() {
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-yellow-400 via-cyan-400 to-yellow-400" />
 
               <div className="text-center mb-5 sm:mb-6">
-                <h2 className="font-bebas text-3xl sm:text-4xl text-white">ОСТАВЬ ЗАЯВКУ</h2>
+                <h2 className="font-bebas text-3xl sm:text-4xl text-white">{t(T.pricing.formTitle, lang)}</h2>
                 <p className="font-montserrat text-gray-400 text-sm mt-2">
-                  Получи <span className="text-cyan-400 font-bold">бесплатную консультацию</span> и точную цену
+                  {t(T.pricing.formSubtitle, lang)}<span className="text-cyan-400 font-bold">{t(T.pricing.formSubtitleHighlight, lang)}</span>{t(T.pricing.formSubtitleEnd, lang)}
                 </p>
               </div>
 
               {/* What you get */}
               <div className="mb-5 p-3.5 rounded-xl bg-cyan-500/5 border border-cyan-500/20">
-                <p className="font-montserrat font-bold text-cyan-400 text-sm mb-2">Что вы получите:</p>
+                <p className="font-montserrat font-bold text-cyan-400 text-sm mb-2">{t(T.pricing.formBenefitsTitle, lang)}</p>
                 <ul className="space-y-1.5 text-xs sm:text-sm text-gray-300">
-                  <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-green-400 shrink-0" /> Точный расчёт для вашей комнаты</li>
-                  <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-green-400 shrink-0" /> Подбор оптимальной мощности</li>
-                  <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-green-400 shrink-0" /> Расчёт рассрочки 0%</li>
-                  <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-green-400 shrink-0" /> Запись на бесплатную установку</li>
+                  {T.pricing.formBenefits.map((b, i) => (
+                    <li key={i} className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-green-400 shrink-0" /> {t(b, lang)}</li>
+                  ))}
                 </ul>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-3">
                 <input
                   type="text"
-                  placeholder="Ваше имя"
+                  placeholder={t(T.pricing.inputName, lang)}
                   value={formName}
                   onChange={e => setFormName(e.target.value)}
                   className="w-full px-4 py-3.5 rounded-xl bg-white/5 border border-cyan-900/40 text-white placeholder-gray-500 font-montserrat text-sm focus:outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/30 transition-all"
                 />
                 <input
                   type="tel"
-                  placeholder="+998 __ ___ __ __"
+                  placeholder={t(T.pricing.inputPhone, lang)}
                   value={formPhone}
                   onChange={e => setFormPhone(e.target.value)}
                   className="w-full px-4 py-3.5 rounded-xl bg-white/5 border border-cyan-900/40 text-white placeholder-gray-500 font-montserrat text-sm focus:outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/30 transition-all"
@@ -682,32 +780,32 @@ export default function Home() {
                   whileTap={{ scale: 0.98 }}
                 >
                   {formSent ? (
-                    <><Check className="w-6 h-6" /> ЗАЯВКА ОТПРАВЛЕНА!</>
+                    <><Check className="w-6 h-6" /> {t(T.pricing.submitSent, lang)}</>
                   ) : (
-                    <><Send className="w-5 h-5" /> ПОЛУЧИТЬ КОНСУЛЬТАЦИЮ</>
+                    <><Send className="w-5 h-5" /> {t(T.pricing.submitBtn, lang)}</>
                   )}
                 </motion.button>
               </form>
 
               <div className="flex items-center justify-center gap-3 mt-4 text-xs text-gray-500">
-                <span className="flex items-center gap-1"><Check className="w-3 h-3 text-green-500" /> Без предоплаты</span>
-                <span className="flex items-center gap-1"><Check className="w-3 h-3 text-green-500" /> Ответим за 5 мин</span>
+                <span className="flex items-center gap-1"><Check className="w-3 h-3 text-green-500" /> {t(T.pricing.noPrepay, lang)}</span>
+                <span className="flex items-center gap-1"><Check className="w-3 h-3 text-green-500" /> {t(T.pricing.fastReply, lang)}</span>
               </div>
 
               <p className="text-center text-gray-600 text-[10px] mt-3">
-                Нажимая кнопку, вы соглашаетесь на обработку данных
+                {t(T.pricing.consent, lang)}
               </p>
             </div>
           </div>
 
           {/* Or contact directly */}
           <div className="mt-8 text-center">
-            <p className="font-montserrat text-gray-400 text-sm mb-4">Или свяжитесь напрямую:</p>
+            <p className="font-montserrat text-gray-400 text-sm mb-4">{t(T.pricing.contactDirect, lang)}</p>
             <div className="flex flex-wrap items-center justify-center gap-3">
-              <a href={TELEGRAM_LINK} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-5 py-3 rounded-xl bg-[#0088cc] text-white font-montserrat font-bold text-sm hover:bg-[#0099dd] transition-all shadow-[0_0_15px_rgba(0,136,204,0.3)]">
+              <a href={TELEGRAM_BOT} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-5 py-3 rounded-xl bg-[#0088cc] text-white font-montserrat font-bold text-sm hover:bg-[#0099dd] transition-all shadow-[0_0_15px_rgba(0,136,204,0.3)]">
                 <MessageCircle className="w-5 h-5" /> Telegram
               </a>
-              <a href="https://wa.me/998998923602" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-5 py-3 rounded-xl bg-[#25D366] text-white font-montserrat font-bold text-sm hover:bg-[#20bd5a] transition-all shadow-[0_0_15px_rgba(37,211,102,0.3)]">
+              <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-5 py-3 rounded-xl bg-[#25D366] text-white font-montserrat font-bold text-sm hover:bg-[#20bd5a] transition-all shadow-[0_0_15px_rgba(37,211,102,0.3)]">
                 <Phone className="w-5 h-5" /> WhatsApp
               </a>
               <a href={INSTAGRAM_LINK} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-montserrat font-bold text-sm hover:from-purple-500 hover:to-pink-500 transition-all shadow-[0_0_15px_rgba(168,85,247,0.3)]">
@@ -724,15 +822,14 @@ export default function Home() {
       {/* ═══ FAQ ═══ */}
       <Section className="py-14 sm:py-20 bg-[#050D1A]">
         <div className="max-w-3xl mx-auto px-4 sm:px-6">
-          <h2 className="font-bebas text-4xl sm:text-6xl text-center text-white mb-10 sm:mb-14">ЧАСТЫЕ <span className="text-cyan-400">ВОПРОСЫ</span></h2>
+          <h2 className="font-bebas text-4xl sm:text-6xl text-center text-white mb-10 sm:mb-14">
+            {t(T.faq.title, lang)}<span className="text-cyan-400">{t(T.faq.titleHighlight, lang)}</span>
+          </h2>
 
           <div className="space-y-3">
-            <FaqItem icon={<Wrench className="w-5 h-5" />} q="Сколько стоит установка?" a="Установка БЕСПЛАТНАЯ! Мастер приедет в день доставки или на следующий день. Стандартная установка (до 3м трассы) включена в стоимость." />
-            <FaqItem icon={<FileText className="w-5 h-5" />} q="Есть ли рассрочка?" a="Да! Рассрочка 0% на 12 месяцев без переплаты. Это всего 30$ в месяц. Оформление за 15 минут с паспортом." />
-            <FaqItem icon={<Shield className="w-5 h-5" />} q="Какая гарантия?" a="Официальная гарантия Midea — 3 года на весь кондиционер. Сервисный центр в Ташкенте. Запчасти всегда в наличии." />
-            <FaqItem icon={<Truck className="w-5 h-5" />} q="Доставляете в регионы?" a="Да! Доставляем по всему Узбекистану. По Ташкенту — бесплатно в тот же день. В регионы — 1-3 дня." />
-            <FaqItem icon={<Zap className="w-5 h-5" />} q="Работает ли при низком напряжении?" a="Да! Технология Prime Guard позволяет ALBA работать при напряжении от 145V. Защита от скачков, перегрева и замерзания." />
-            <FaqItem icon={<Timer className="w-5 h-5" />} q="На какую площадь хватает?" a="ALBA 9 — до 25 кв.м (комната, спальня). ALBA 12 — до 35 кв.м (гостиная). ALBA 18 — до 50 кв.м (большой зал). Поможем подобрать!" />
+            {T.faq.items.map((item, i) => (
+              <FaqItem key={i} icon={faqIcons[i]} q={t(item.q, lang)} a={t(item.a, lang)} />
+            ))}
           </div>
         </div>
       </Section>
@@ -740,21 +837,23 @@ export default function Home() {
       {/* ═══ FINAL CTA BANNER ═══ */}
       <Section className="py-14 sm:py-20 bg-gradient-to-r from-[#050D1A] via-[#0a1628] to-[#050D1A]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
-          <h2 className="font-bebas text-4xl sm:text-6xl text-white mb-3">ЛЕТО <span className="text-red-500">УЖЕ ЗДЕСЬ</span></h2>
+          <h2 className="font-bebas text-4xl sm:text-6xl text-white mb-3">
+            {t(T.finalCta.title, lang)}<span className="text-red-500">{t(T.finalCta.titleHighlight, lang)}</span>
+          </h2>
           <p className="font-montserrat text-gray-400 text-sm sm:text-lg mb-4 max-w-2xl mx-auto">
-            Не ждите +45°C — закажите Midea ALBA сейчас и забудьте о жаре, шуме и огромных счетах
+            {t(T.finalCta.subtitle, lang)}
           </p>
           <p className="font-montserrat text-yellow-400 font-bold text-base sm:text-xl mb-6">
-            Рассрочка 0% — всего 30$/мес
+            {t(T.finalCta.installment, lang)}
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <PulseCTA text="КУПИТЬ ЗА 360$ — СЭКОНОМИТЬ 90$" onClick={() => scrollTo("lead-form")} size="lg" />
+            <PulseCTA text={t(T.finalCta.ctaBtn, lang)} href={TELEGRAM_BOT} size="lg" />
           </div>
           <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8 mt-6 text-xs sm:text-sm text-gray-400">
-            <span className="flex items-center gap-1.5"><Truck className="w-4 h-4 text-cyan-400" /> Бесплатная доставка</span>
-            <span className="flex items-center gap-1.5"><Wrench className="w-4 h-4 text-cyan-400" /> Бесплатная установка</span>
-            <span className="flex items-center gap-1.5"><Shield className="w-4 h-4 text-cyan-400" /> Гарантия 3 года</span>
-            <span className="flex items-center gap-1.5"><FileText className="w-4 h-4 text-cyan-400" /> Рассрочка 0%</span>
+            <span className="flex items-center gap-1.5"><Truck className="w-4 h-4 text-cyan-400" /> {t(T.finalCta.badgeDelivery, lang)}</span>
+            <span className="flex items-center gap-1.5"><Wrench className="w-4 h-4 text-cyan-400" /> {t(T.finalCta.badgeInstall, lang)}</span>
+            <span className="flex items-center gap-1.5"><Shield className="w-4 h-4 text-cyan-400" /> {t(T.finalCta.badgeWarranty, lang)}</span>
+            <span className="flex items-center gap-1.5"><FileText className="w-4 h-4 text-cyan-400" /> {t(T.finalCta.badgeInstallment, lang)}</span>
           </div>
         </div>
       </Section>
@@ -767,31 +866,31 @@ export default function Home() {
               <div className="font-bebas text-xl tracking-wider mb-3">
                 <span className="text-cyan-400">WELKIN</span> &times; <span className="text-white">MIDEA</span>
               </div>
-              <p className="font-montserrat text-gray-500 text-sm">Официальный дистрибьютор Midea в Узбекистане</p>
+              <p className="font-montserrat text-gray-500 text-sm">{t(T.footer.officialDealer, lang)}</p>
               <div className="flex items-center gap-2 mt-3">
                 {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />)}
                 <span className="font-montserrat text-white text-sm font-bold ml-1">4.9</span>
               </div>
             </div>
             <div>
-              <p className="font-montserrat font-bold text-white text-sm mb-3">Контакты</p>
+              <p className="font-montserrat font-bold text-white text-sm mb-3">{t(T.footer.contacts, lang)}</p>
               <div className="space-y-2 text-sm text-gray-400">
                 <a href={PHONE_HREF} className="flex items-center gap-2 hover:text-cyan-400 transition-colors"><Phone className="w-4 h-4" />{PHONE}</a>
                 <a href={INSTAGRAM_LINK} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-cyan-400 transition-colors"><Sparkles className="w-4 h-4" />@welkin.midea</a>
-                <a href={TELEGRAM_LINK} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-cyan-400 transition-colors"><MessageCircle className="w-4 h-4" />@welkin_midea</a>
+                <a href={TELEGRAM_BOT} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-cyan-400 transition-colors"><MessageCircle className="w-4 h-4" />@mideazubot</a>
               </div>
             </div>
             <div>
-              <p className="font-montserrat font-bold text-white text-sm mb-3">Режим работы</p>
+              <p className="font-montserrat font-bold text-white text-sm mb-3">{t(T.footer.workHours, lang)}</p>
               <div className="space-y-1 text-sm text-gray-400">
-                <p>Пн-Сб: 9:00 — 19:00</p>
-                <p>Вс: 10:00 — 17:00</p>
-                <p className="mt-2">Ташкент, Узбекистан</p>
+                <p>{t(T.footer.monSat, lang)}</p>
+                <p>{t(T.footer.sun, lang)}</p>
+                <p className="mt-2">{t(T.footer.city, lang)}</p>
               </div>
             </div>
           </div>
           <div className="mt-8 pt-6 border-t border-cyan-900/20 text-center text-gray-600 text-xs font-montserrat">
-            &copy; 2026 Welkin &times; Midea. Все права защищены.
+            &copy; 2026 Welkin &times; Midea. {t(T.footer.rights, lang)}
           </div>
         </div>
       </footer>
@@ -810,14 +909,14 @@ export default function Home() {
                 <span className="font-bebas text-lg sm:text-xl text-white">ALBA</span>
                 <span className="font-bebas text-lg sm:text-xl text-yellow-400">360$</span>
                 <span className="font-bebas text-sm text-gray-500 line-through hidden sm:inline">450$</span>
-                <span className="text-[10px] sm:text-xs text-green-400 font-montserrat font-bold">или 30$/мес</span>
+                <span className="text-[10px] sm:text-xs text-green-400 font-montserrat font-bold">{t(T.sticky.installment, lang)}</span>
               </div>
               <div className="flex items-center gap-2">
-                <PulseCTA text="КУПИТЬ" onClick={() => scrollTo("lead-form")} size="sm" />
-                <a href={TELEGRAM_LINK} target="_blank" rel="noopener noreferrer" className="shrink-0 w-10 h-10 rounded-xl bg-[#0088cc] flex items-center justify-center text-white hover:bg-[#0099dd] transition-all">
+                <PulseCTA text={t(T.sticky.buyBtn, lang)} href={TELEGRAM_BOT} size="sm" />
+                <a href={TELEGRAM_BOT} target="_blank" rel="noopener noreferrer" className="shrink-0 w-10 h-10 rounded-xl bg-[#0088cc] flex items-center justify-center text-white hover:bg-[#0099dd] transition-all">
                   <MessageCircle className="w-4 h-4" />
                 </a>
-                <a href="https://wa.me/998998923602" target="_blank" rel="noopener noreferrer" className="shrink-0 w-10 h-10 rounded-xl bg-[#25D366] flex items-center justify-center text-white hover:bg-[#20bd5a] transition-all">
+                <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className="shrink-0 w-10 h-10 rounded-xl bg-[#25D366] flex items-center justify-center text-white hover:bg-[#20bd5a] transition-all">
                   <Phone className="w-4 h-4" />
                 </a>
               </div>
