@@ -13,6 +13,8 @@ import {
   ArrowDown, Sparkles, Globe
 } from "lucide-react";
 import { type Lang, translations as T, t } from "@/lib/i18n";
+import { trackLead, trackContact, trackInitiateCheckout } from "@/lib/fbpixel";
+import { usePixelTracking } from "@/hooks/usePixelTracking";
 
 // ── CDN URLs ─────────────────────────────────────────────────────────────────
 const IMG = {
@@ -138,6 +140,7 @@ function PulseCTA({ text, onClick, href, size = "lg", className = "" }: { text: 
         className={`${cls} inline-flex items-center justify-center text-center`}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.97 }}
+        onClick={onClick}
       >
         {inner}
       </motion.a>
@@ -252,6 +255,9 @@ export default function Home() {
   const [showSticky, setShowSticky] = useState(false);
   const [stock] = useState(47);
 
+  // Facebook Pixel: auto-track scroll-based events (ViewContent, ScrollDepth, Schedule)
+  usePixelTracking(lang);
+
   // Persist language choice + sync URL param for shareable links
   useEffect(() => {
     localStorage.setItem("midea-lang", lang);
@@ -279,6 +285,8 @@ export default function Home() {
         ? `Здравствуйте! Меня зовут ${formName.trim()}, мой номер: ${formPhone}. Хочу узнать про Midea ALBA.`
         : `Assalomu alaykum! Mening ismim ${formName.trim()}, raqamim: ${formPhone}. Midea ALBA haqida bilmoqchiman.`
     );
+    // Facebook Pixel: Track Lead conversion
+    trackLead(lang, { name: formName.trim() });
     window.open(`${TELEGRAM_BOT}?text=${msg}`, "_blank");
     setFormSent(true);
     setTimeout(() => setFormSent(false), 5000);
@@ -352,7 +360,7 @@ export default function Home() {
             <a href={PHONE_HREF} className="md:hidden shrink-0 w-9 h-9 rounded-lg bg-green-600/20 border border-green-500/30 flex items-center justify-center text-green-400 hover:bg-green-600/30 transition-all">
               <Phone className="w-4 h-4" />
             </a>
-            <PulseCTA text={t(T.header.buyBtn, lang)} href={TELEGRAM_BOT} size="sm" className="hidden sm:inline-flex" />
+            <PulseCTA text={t(T.header.buyBtn, lang)} href={TELEGRAM_BOT} size="sm" className="hidden sm:inline-flex" onClick={() => trackInitiateCheckout('header', lang)} />
           </div>
         </div>
       </header>
@@ -423,12 +431,13 @@ export default function Home() {
 
             {/* CTA */}
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-              <PulseCTA text={t(T.hero.ctaBuy, lang)} href={TELEGRAM_BOT} size="lg" />
+              <PulseCTA text={t(T.hero.ctaBuy, lang)} href={TELEGRAM_BOT} size="lg" onClick={() => trackInitiateCheckout('hero', lang)} />
               <a
                 href={TELEGRAM_BOT}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-bebas text-lg sm:text-xl px-6 sm:px-8 py-3 sm:py-4 rounded-xl bg-[#0088cc] text-white hover:bg-[#0099dd] transition-all text-center flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(0,136,204,0.3)]"
+                onClick={() => trackContact('Telegram', lang)}
               >
                 <MessageCircle className="w-5 h-5" />
                 {t(T.hero.ctaTelegram, lang)}
@@ -534,7 +543,7 @@ export default function Home() {
           {/* CTA after pains */}
           <div className="text-center mt-10 sm:mt-14">
             <p className="font-montserrat text-gray-400 text-sm sm:text-base mb-4">{t(T.pains.ctaText, lang)}</p>
-            <PulseCTA text={t(T.pains.ctaBtn, lang)} href={TELEGRAM_BOT} size="md" />
+            <PulseCTA text={t(T.pains.ctaBtn, lang)} href={TELEGRAM_BOT} size="md" onClick={() => trackInitiateCheckout('pains_section', lang)} />
           </div>
         </div>
       </Section>
@@ -565,7 +574,7 @@ export default function Home() {
       </Section>
 
       {/* ═══ CREATIVE GALLERY — 6 Reasons ═══ */}
-      <Section className="py-14 sm:py-20 bg-[#050D1A]">
+      <Section id="features-section" className="py-14 sm:py-20 bg-[#050D1A]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-10 sm:mb-14">
             <h2 className="font-bebas text-4xl sm:text-6xl lg:text-7xl text-white">
@@ -634,13 +643,13 @@ export default function Home() {
           </div>
 
           <div className="text-center mt-8">
-            <PulseCTA text={t(T.comparison.ctaBtn, lang)} href={TELEGRAM_BOT} size="md" />
+            <PulseCTA text={t(T.comparison.ctaBtn, lang)} href={TELEGRAM_BOT} size="md" onClick={() => trackInitiateCheckout('comparison', lang)} />
           </div>
         </div>
       </Section>
 
       {/* ═══ REVIEWS ═══ */}
-      <Section className="py-14 sm:py-20 bg-[#050D1A]">
+      <Section id="reviews-section" className="py-14 sm:py-20 bg-[#050D1A]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-10 sm:mb-14">
             <h2 className="font-bebas text-4xl sm:text-6xl lg:text-7xl text-white">
@@ -809,16 +818,16 @@ export default function Home() {
           <div className="mt-8 text-center">
             <p className="font-montserrat text-gray-400 text-sm mb-4">{t(T.pricing.contactDirect, lang)}</p>
             <div className="flex flex-wrap items-center justify-center gap-3">
-              <a href={TELEGRAM_BOT} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-5 py-3 rounded-xl bg-[#0088cc] text-white font-montserrat font-bold text-sm hover:bg-[#0099dd] transition-all shadow-[0_0_15px_rgba(0,136,204,0.3)]">
+              <a href={TELEGRAM_BOT} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-5 py-3 rounded-xl bg-[#0088cc] text-white font-montserrat font-bold text-sm hover:bg-[#0099dd] transition-all shadow-[0_0_15px_rgba(0,136,204,0.3)]" onClick={() => trackContact('Telegram', lang)}>
                 <MessageCircle className="w-5 h-5" /> Telegram
               </a>
-              <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-5 py-3 rounded-xl bg-[#25D366] text-white font-montserrat font-bold text-sm hover:bg-[#20bd5a] transition-all shadow-[0_0_15px_rgba(37,211,102,0.3)]">
+              <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-5 py-3 rounded-xl bg-[#25D366] text-white font-montserrat font-bold text-sm hover:bg-[#20bd5a] transition-all shadow-[0_0_15px_rgba(37,211,102,0.3)]" onClick={() => trackContact('WhatsApp', lang)}>
                 <Phone className="w-5 h-5" /> WhatsApp
               </a>
-              <a href={INSTAGRAM_LINK} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-montserrat font-bold text-sm hover:from-purple-500 hover:to-pink-500 transition-all shadow-[0_0_15px_rgba(168,85,247,0.3)]">
+              <a href={INSTAGRAM_LINK} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-montserrat font-bold text-sm hover:from-purple-500 hover:to-pink-500 transition-all shadow-[0_0_15px_rgba(168,85,247,0.3)]" onClick={() => trackContact('Instagram', lang)}>
                 <Sparkles className="w-5 h-5" /> Instagram
               </a>
-              <a href={PHONE_HREF} className="flex items-center gap-2 px-5 py-3 rounded-xl bg-cyan-600/20 border border-cyan-500/40 text-cyan-300 font-montserrat font-bold text-sm hover:bg-cyan-600/30 transition-all">
+              <a href={PHONE_HREF} className="flex items-center gap-2 px-5 py-3 rounded-xl bg-cyan-600/20 border border-cyan-500/40 text-cyan-300 font-montserrat font-bold text-sm hover:bg-cyan-600/30 transition-all" onClick={() => trackContact('Phone', lang)}>
                 <Phone className="w-5 h-5" /> {PHONE}
               </a>
             </div>
@@ -827,7 +836,7 @@ export default function Home() {
       </Section>
 
       {/* ═══ FAQ ═══ */}
-      <Section className="py-14 sm:py-20 bg-[#050D1A]">
+      <Section id="faq-section" className="py-14 sm:py-20 bg-[#050D1A]">
         <div className="max-w-3xl mx-auto px-4 sm:px-6">
           <h2 className="font-bebas text-4xl sm:text-6xl text-center text-white mb-10 sm:mb-14">
             {t(T.faq.title, lang)}<span className="text-cyan-400">{t(T.faq.titleHighlight, lang)}</span>
@@ -854,7 +863,7 @@ export default function Home() {
             {t(T.finalCta.installment, lang)}
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <PulseCTA text={t(T.finalCta.ctaBtn, lang)} href={TELEGRAM_BOT} size="lg" />
+            <PulseCTA text={t(T.finalCta.ctaBtn, lang)} href={TELEGRAM_BOT} size="lg" onClick={() => trackInitiateCheckout('final_cta', lang)} />
           </div>
           <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8 mt-6 text-xs sm:text-sm text-gray-400">
             <span className="flex items-center gap-1.5"><Truck className="w-4 h-4 text-cyan-400" /> {t(T.finalCta.badgeDelivery, lang)}</span>
@@ -919,11 +928,11 @@ export default function Home() {
                 <span className="text-[10px] sm:text-xs text-green-400 font-montserrat font-bold">{t(T.sticky.installment, lang)}</span>
               </div>
               <div className="flex items-center gap-2">
-                <PulseCTA text={t(T.sticky.buyBtn, lang)} href={TELEGRAM_BOT} size="sm" />
-                <a href={TELEGRAM_BOT} target="_blank" rel="noopener noreferrer" className="shrink-0 w-10 h-10 rounded-xl bg-[#0088cc] flex items-center justify-center text-white hover:bg-[#0099dd] transition-all">
+                <PulseCTA text={t(T.sticky.buyBtn, lang)} href={TELEGRAM_BOT} size="sm" onClick={() => trackInitiateCheckout('sticky_bar', lang)} />
+                <a href={TELEGRAM_BOT} target="_blank" rel="noopener noreferrer" className="shrink-0 w-10 h-10 rounded-xl bg-[#0088cc] flex items-center justify-center text-white hover:bg-[#0099dd] transition-all" onClick={() => trackContact('Telegram_sticky', lang)}>
                   <MessageCircle className="w-4 h-4" />
                 </a>
-                <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className="shrink-0 w-10 h-10 rounded-xl bg-[#25D366] flex items-center justify-center text-white hover:bg-[#20bd5a] transition-all">
+                <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className="shrink-0 w-10 h-10 rounded-xl bg-[#25D366] flex items-center justify-center text-white hover:bg-[#20bd5a] transition-all" onClick={() => trackContact('WhatsApp_sticky', lang)}>
                   <Phone className="w-4 h-4" />
                 </a>
               </div>
