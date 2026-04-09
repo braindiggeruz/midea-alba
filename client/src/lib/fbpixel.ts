@@ -22,9 +22,29 @@ declare global {
 
 type Lang = "ru" | "uz";
 
+const PIXEL_DEBUG = true;
+
 function fbq(...args: unknown[]) {
-  if (typeof window !== "undefined" && window.fbq) {
+  if (typeof window !== "undefined" && typeof window.fbq === "function") {
     window.fbq(...args);
+    if (PIXEL_DEBUG) {
+      console.log("[FB Pixel]", ...args);
+    }
+  } else {
+    if (PIXEL_DEBUG) {
+      console.warn("[FB Pixel] fbq not loaded yet, queuing:", ...args);
+    }
+    // Retry after a short delay in case fbevents.js hasn't loaded yet
+    if (typeof window !== "undefined") {
+      setTimeout(() => {
+        if (typeof window.fbq === "function") {
+          window.fbq(...args);
+          if (PIXEL_DEBUG) {
+            console.log("[FB Pixel] (delayed)", ...args);
+          }
+        }
+      }, 2000);
+    }
   }
 }
 
