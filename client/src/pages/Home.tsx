@@ -1,1095 +1,833 @@
-/**
- * MIDEA ALBA LANDING PAGE
- * Design: Dark Cyber Tech
- * Colors: #050D1A bg, #00E5FF cyan neon, #FFD600 yellow CTA
- * Fonts: Bebas Neue (display), Montserrat (body), Orbitron (data)
- * Goal: Maximum lead conversion — collect name + phone
+/*
+ * Midea ALBA — МЕГА-ПРОДАЮЩИЙ ЛЕНДИНГ v3 (Final Polish)
+ * Design: Dark Cyber Tech — #050D1A bg, neon cyan accents, yellow CTAs
+ * All 34+ audit issues resolved
  */
+import { useState, useEffect, useRef, type FormEvent } from "react";
+import { motion, useInView, AnimatePresence } from "framer-motion";
+import {
+  Snowflake, Wifi, Volume2, Shield, Zap, Brain, Phone, Clock,
+  ChevronDown, Star, Check, X, Truck, Wrench, FileText,
+  MessageCircle, ThermometerSun, BatteryCharging, Timer, Send,
+  ArrowDown, Sparkles
+} from "lucide-react";
 
-import { useState, useEffect, useRef } from "react";
-import { motion, useInView, useAnimation } from "framer-motion";
+// ── CDN URLs ─────────────────────────────────────────────────────────────────
+const IMG = {
+  heroBg: "https://d2xsxph8kpxj0f.cloudfront.net/310519663532358315/Pvyt7qa76fQ9ttQfPKguuc/hero-bg_2bce22a1.jpg",
+  acHero: "https://d2xsxph8kpxj0f.cloudfront.net/310519663532358315/Pvyt7qa76fQ9ttQfPKguuc/ac-hero_ce9c07c1.png",
+  temperature: "https://d2xsxph8kpxj0f.cloudfront.net/310519663532358315/Pvyt7qa76fQ9ttQfPKguuc/v2_creative_20_temperature_control_5582a0f9.png",
+  wifiControl: "https://d2xsxph8kpxj0f.cloudfront.net/310519663532358315/Pvyt7qa76fQ9ttQfPKguuc/v2_creative_16_wifi_control_03d365a2.png",
+  soundWave: "https://d2xsxph8kpxj0f.cloudfront.net/310519663532358315/Pvyt7qa76fQ9ttQfPKguuc/v2_creative_18_sound_wave_e1f556fb.png",
+  moneyTree: "https://d2xsxph8kpxj0f.cloudfront.net/310519663532358315/Pvyt7qa76fQ9ttQfPKguuc/v2_creative_7_money_tree_d44a28ff.png",
+  speedometer: "https://d2xsxph8kpxj0f.cloudfront.net/310519663532358315/Pvyt7qa76fQ9ttQfPKguuc/v2_creative_8_speedometer_397f4449.png",
+  robotAi: "https://d2xsxph8kpxj0f.cloudfront.net/310519663532358315/Pvyt7qa76fQ9ttQfPKguuc/v2_creative_12_robot_ai_b7a25853.png",
+  priceShock: "https://d2xsxph8kpxj0f.cloudfront.net/310519663532358315/Pvyt7qa76fQ9ttQfPKguuc/v2_creative_1_price_shock_61318392.webp",
+  limited: "https://d2xsxph8kpxj0f.cloudfront.net/310519663532358315/Pvyt7qa76fQ9ttQfPKguuc/v2_creative_4_limited_4c57be13.webp",
+  lifestyle: "https://d2xsxph8kpxj0f.cloudfront.net/310519663532358315/Pvyt7qa76fQ9ttQfPKguuc/v2_creative_5_lifestyle_881041a6.webp",
+};
 
-// ── Image URLs (CDN) ──────────────────────────────────────────────────────────
-const HERO_BG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663532358315/Pvyt7qa76fQ9ttQfPKguuc/hero-bg_2bce22a1.jpg";
-const AC_HERO = "https://d2xsxph8kpxj0f.cloudfront.net/310519663532358315/Pvyt7qa76fQ9ttQfPKguuc/ac-hero_ce9c07c1.png";
-const SAVINGS_IMG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663532358315/Pvyt7qa76fQ9ttQfPKguuc/savings-visual_43ddf70a.jpg";
-const WIFI_IMG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663532358315/Pvyt7qa76fQ9ttQfPKguuc/wifi-control_20f63a8d.jpg";
-const SILENT_IMG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663532358315/Pvyt7qa76fQ9ttQfPKguuc/silent-visual_b5569ce7.jpg";
+const TELEGRAM_LINK = "https://t.me/welkin_midea";
+const INSTAGRAM_LINK = "https://instagram.com/welkin.midea";
+const PHONE = "+998 99 892 36 02";
+const PHONE_HREF = "tel:+998998923602";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-interface HexBadgeProps {
-  icon: string;
-  label: string;
-  sub?: string;
+function scrollTo(id: string) {
+  document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
 }
 
-interface FeatureCardProps {
-  icon: string;
-  title: string;
-  desc: string;
-  highlight: string;
-}
-
-interface CounterProps {
-  end: number;
-  suffix?: string;
-  prefix?: string;
-  duration?: number;
-}
-
-// ── Counter Animation ─────────────────────────────────────────────────────────
-function AnimatedCounter({ end, suffix = "", prefix = "", duration = 2000 }: CounterProps) {
+// ── Animated counter (shows final value immediately when in view) ────────────
+function Counter({ end, suffix = "", prefix = "", duration = 2000 }: { end: number; suffix?: string; prefix?: string; duration?: number }) {
   const [count, setCount] = useState(0);
+  const [done, setDone] = useState(false);
   const ref = useRef<HTMLSpanElement>(null);
-  const inView = useInView(ref, { once: true });
+  const inView = useInView(ref, { once: true, margin: "-50px" });
 
   useEffect(() => {
     if (!inView) return;
-    let start = 0;
-    const step = end / (duration / 16);
+    const startTime = Date.now();
     const timer = setInterval(() => {
-      start += step;
-      if (start >= end) {
-        setCount(end);
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const current = Math.round(end * eased);
+      setCount(current);
+      if (progress >= 1) {
         clearInterval(timer);
-      } else {
-        setCount(Math.floor(start));
+        setCount(end);
+        setDone(true);
       }
     }, 16);
     return () => clearInterval(timer);
   }, [inView, end, duration]);
 
-  return <span ref={ref}>{prefix}{count}{suffix}</span>;
+  return <span ref={ref}>{prefix}{done ? end : count}{suffix}</span>;
 }
 
-// ── Hex Badge ─────────────────────────────────────────────────────────────────
-function HexBadge({ icon, label, sub }: HexBadgeProps) {
-  return (
-    <motion.div
-      className="flex flex-col items-center gap-1"
-      whileHover={{ scale: 1.1 }}
-      transition={{ type: "spring", stiffness: 400 }}
-    >
-      <div
-        className="relative flex flex-col items-center justify-center text-center"
-        style={{
-          width: 90,
-          height: 104,
-          background: "rgba(0,229,255,0.06)",
-          border: "1.5px solid rgba(0,229,255,0.45)",
-          clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)",
-          boxShadow: "0 0 12px rgba(0,229,255,0.2), inset 0 0 12px rgba(0,229,255,0.05)",
-        }}
-      >
-        <span style={{ fontSize: "1.5rem" }}>{icon}</span>
-        <span style={{ fontSize: "0.6rem", color: "#00E5FF", fontWeight: 700, lineHeight: 1.2, marginTop: 2 }}>{label}</span>
-        {sub && <span style={{ fontSize: "0.55rem", color: "rgba(255,255,255,0.6)", lineHeight: 1.1 }}>{sub}</span>}
-      </div>
-    </motion.div>
-  );
-}
+// ── Countdown timer ──────────────────────────────────────────────────────────
+function Countdown() {
+  const [time, setTime] = useState({ h: 23, m: 47, s: 12 });
+  useEffect(() => {
+    const t = setInterval(() => {
+      setTime(prev => {
+        let { h, m, s } = prev;
+        s--;
+        if (s < 0) { s = 59; m--; }
+        if (m < 0) { m = 59; h--; }
+        if (h < 0) { h = 23; m = 59; s = 59; }
+        return { h, m, s };
+      });
+    }, 1000);
+    return () => clearInterval(t);
+  }, []);
 
-// ── Feature Card ──────────────────────────────────────────────────────────────
-function FeatureCard({ icon, title, desc, highlight }: FeatureCardProps) {
+  const pad = (n: number) => String(n).padStart(2, "0");
   return (
-    <motion.div
-      className="dark-card rounded-2xl p-6 flex flex-col gap-3"
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.5 }}
-      whileHover={{ y: -5, borderColor: "rgba(0,229,255,0.5)" }}
-    >
-      <div className="text-4xl mb-1">{icon}</div>
-      <div
-        className="font-bebas text-2xl"
-        style={{ color: "#00E5FF", letterSpacing: "0.05em" }}
-      >
-        {title}
-      </div>
-      <p className="text-sm text-gray-300 leading-relaxed">{desc}</p>
-      <div
-        className="font-orbitron text-sm font-bold mt-auto pt-2"
-        style={{
-          color: "#FFD600",
-          borderTop: "1px solid rgba(255,214,0,0.2)",
-          paddingTop: "0.75rem",
-        }}
-      >
-        {highlight}
-      </div>
-    </motion.div>
-  );
-}
-
-// ── Pain Point Card ───────────────────────────────────────────────────────────
-function PainCard({ emoji, pain, solution }: { emoji: string; pain: string; solution: string }) {
-  return (
-    <motion.div
-      className="rounded-xl p-5 flex gap-4 items-start"
-      style={{
-        background: "rgba(10,22,40,0.9)",
-        border: "1px solid rgba(0,229,255,0.15)",
-      }}
-      initial={{ opacity: 0, x: -20 }}
-      whileInView={{ opacity: 1, x: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.4 }}
-    >
-      <span className="text-3xl flex-shrink-0">{emoji}</span>
-      <div>
-        <p className="text-gray-400 text-sm line-through mb-1">{pain}</p>
-        <p className="text-white font-semibold text-sm">{solution}</p>
-      </div>
-    </motion.div>
-  );
-}
-
-// ── Review Card ───────────────────────────────────────────────────────────────
-function ReviewCard({ name, city, text, rating }: { name: string; city: string; text: string; rating: number }) {
-  return (
-    <motion.div
-      className="dark-card rounded-2xl p-6 flex flex-col gap-3"
-      initial={{ opacity: 0, scale: 0.95 }}
-      whileInView={{ opacity: 1, scale: 1 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.4 }}
-    >
-      <div className="flex gap-1">
-        {Array.from({ length: rating }).map((_, i) => (
-          <span key={i} style={{ color: "#FFD600", fontSize: "1rem" }}>★</span>
-        ))}
-      </div>
-      <p className="text-gray-300 text-sm leading-relaxed italic">"{text}"</p>
-      <div className="flex items-center gap-2 mt-auto">
-        <div
-          className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm"
-          style={{ background: "rgba(0,229,255,0.2)", color: "#00E5FF" }}
-        >
-          {name[0]}
+    <div className="flex items-center gap-1.5 sm:gap-2">
+      {[
+        { val: pad(time.h), label: "ч" },
+        { val: pad(time.m), label: "м" },
+        { val: pad(time.s), label: "с" },
+      ].map((item, i) => (
+        <div key={i} className="flex items-center gap-1.5 sm:gap-2">
+          <div className="flex flex-col items-center">
+            <span className="font-bebas text-2xl sm:text-4xl text-white bg-white/10 backdrop-blur-sm rounded-lg px-2.5 sm:px-3.5 py-1 border border-cyan-500/30 min-w-[2.5rem] sm:min-w-[3.5rem] text-center tabular-nums">
+              {item.val}
+            </span>
+            <span className="text-[9px] sm:text-[10px] text-gray-500 mt-0.5">{item.label}</span>
+          </div>
+          {i < 2 && <span className="font-bebas text-xl sm:text-3xl text-cyan-400/60 -mt-3">:</span>}
         </div>
-        <div>
-          <p className="font-semibold text-sm text-white">{name}</p>
-          <p className="text-xs text-gray-500">{city}</p>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-// ── Lead Form ─────────────────────────────────────────────────────────────────
-function LeadForm({ id }: { id: string }) {
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim() || !phone.trim()) return;
-    setLoading(true);
-    // Simulate submission — in production connect to Telegram bot API
-    await new Promise((r) => setTimeout(r, 1200));
-    setLoading(false);
-    setSubmitted(true);
-  };
-
-  if (submitted) {
-    return (
-      <motion.div
-        className="text-center py-10"
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-      >
-        <div className="text-6xl mb-4">🎉</div>
-        <h3 className="font-bebas text-3xl neon-cyan mb-2">ЗАЯВКА ПРИНЯТА!</h3>
-        <p className="text-gray-300">Наш менеджер свяжется с вами в течение 15 минут</p>
-      </motion.div>
-    );
-  }
-
-  return (
-    <form id={id} onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <input
-        type="text"
-        placeholder="Ваше имя"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        required
-        className="w-full px-5 py-4 rounded-xl text-white placeholder-gray-500 outline-none transition-all"
-        style={{
-          background: "rgba(255,255,255,0.05)",
-          border: "1px solid rgba(0,229,255,0.3)",
-          fontSize: "1rem",
-        }}
-        onFocus={(e) => (e.target.style.borderColor = "#00E5FF")}
-        onBlur={(e) => (e.target.style.borderColor = "rgba(0,229,255,0.3)")}
-      />
-      <input
-        type="tel"
-        placeholder="+998 __ ___ __ __"
-        value={phone}
-        onChange={(e) => setPhone(e.target.value)}
-        required
-        className="w-full px-5 py-4 rounded-xl text-white placeholder-gray-500 outline-none transition-all"
-        style={{
-          background: "rgba(255,255,255,0.05)",
-          border: "1px solid rgba(0,229,255,0.3)",
-          fontSize: "1rem",
-        }}
-        onFocus={(e) => (e.target.style.borderColor = "#00E5FF")}
-        onBlur={(e) => (e.target.style.borderColor = "rgba(0,229,255,0.3)")}
-      />
-      <button type="submit" className="btn-cta w-full" disabled={loading}>
-        {loading ? "ОТПРАВЛЯЕМ..." : "ПОЛУЧИТЬ КОНСУЛЬТАЦИЮ БЕСПЛАТНО"}
-      </button>
-      <p className="text-xs text-gray-500 text-center">
-        Нажимая кнопку, вы соглашаетесь на обработку персональных данных
-      </p>
-    </form>
-  );
-}
-
-// ── Comparison Table ──────────────────────────────────────────────────────────
-function ComparisonTable() {
-  const rows = [
-    { param: "Шум", others: "45 дБ (мешает спать)", alba: "19 дБ (тише шёпота)" },
-    { param: "Управление", others: "Только пульт", alba: "Wi-Fi + голос + приложение" },
-    { param: "Экономия", others: "Обычный инвертор", alba: "AI EcoMaster -60% свет" },
-    { param: "Защита", others: "Нет", alba: "Prime Guard от 145V" },
-    { param: "Охлаждение", others: "10-15 минут", alba: "3 минуты" },
-    { param: "Точность", others: "±2-3°C", alba: "±0.5°C" },
-  ];
-
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full" style={{ borderCollapse: "separate", borderSpacing: 0 }}>
-        <thead>
-          <tr>
-            <th className="py-4 px-4 text-left text-gray-400 font-semibold text-sm">Параметр</th>
-            <th className="py-4 px-4 text-center text-gray-400 font-semibold text-sm">Обычный кондей</th>
-            <th
-              className="py-4 px-4 text-center font-bold text-sm font-bebas text-xl"
-              style={{ color: "#00E5FF" }}
-            >
-              MIDEA ALBA
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, i) => (
-            <motion.tr
-              key={i}
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.08 }}
-              style={{
-                background: i % 2 === 0 ? "rgba(0,229,255,0.03)" : "transparent",
-              }}
-            >
-              <td className="py-3 px-4 text-gray-300 text-sm font-semibold">{row.param}</td>
-              <td className="py-3 px-4 text-center text-gray-500 text-sm">
-                <span className="flex items-center justify-center gap-1">
-                  <span style={{ color: "#FF3B30" }}>✗</span> {row.others}
-                </span>
-              </td>
-              <td className="py-3 px-4 text-center text-sm font-semibold" style={{ color: "#00E5FF" }}>
-                <span className="flex items-center justify-center gap-1">
-                  <span style={{ color: "#4CD964" }}>✓</span> {row.alba}
-                </span>
-              </td>
-            </motion.tr>
-          ))}
-        </tbody>
-      </table>
+      ))}
     </div>
   );
 }
 
-// ── Sticky CTA Bar ────────────────────────────────────────────────────────────
-function StickyCTA() {
-  const [visible, setVisible] = useState(false);
+// ── Pulsing CTA button ───────────────────────────────────────────────────────
+function PulseCTA({ text, onClick, size = "lg", className = "" }: { text: string; onClick: () => void; size?: "lg" | "md" | "sm"; className?: string }) {
+  const sizes = {
+    lg: "text-xl sm:text-2xl px-10 sm:px-16 py-4 sm:py-5",
+    md: "text-base sm:text-xl px-6 sm:px-10 py-3 sm:py-4",
+    sm: "text-sm sm:text-base px-4 sm:px-6 py-2 sm:py-2.5",
+  };
+  return (
+    <motion.button
+      onClick={onClick}
+      className={`relative font-bebas font-bold text-black rounded-xl bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 shadow-[0_0_30px_rgba(250,204,21,0.4)] hover:shadow-[0_0_50px_rgba(250,204,21,0.6)] transition-all ${sizes[size]} ${className}`}
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.97 }}
+    >
+      <span className="relative z-10">{text}</span>
+      <motion.div
+        className="absolute inset-0 rounded-xl bg-yellow-400/30"
+        animate={{ scale: [1, 1.15, 1], opacity: [0.5, 0, 0.5] }}
+        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+      />
+    </motion.button>
+  );
+}
+
+// ── Section wrapper with fade-in ─────────────────────────────────────────────
+function Section({ children, id, className = "" }: { children: React.ReactNode; id?: string; className?: string }) {
+  const ref = useRef<HTMLElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-60px" });
+  return (
+    <motion.section
+      ref={ref}
+      id={id}
+      className={`relative ${className}`}
+      initial={{ opacity: 0, y: 30 }}
+      animate={inView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.6, ease: "easeOut" }}
+    >
+      {children}
+    </motion.section>
+  );
+}
+
+// ── FAQ Item ─────────────────────────────────────────────────────────────────
+function FaqItem({ q, a, icon }: { q: string; a: string; icon: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border border-cyan-900/40 rounded-xl overflow-hidden bg-[#0a1628]/80 backdrop-blur-sm hover:border-cyan-500/40 transition-colors">
+      <button onClick={() => setOpen(!open)} className="w-full flex items-center gap-3 sm:gap-4 p-4 sm:p-5 text-left">
+        <div className="shrink-0 w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center text-cyan-400">
+          {icon}
+        </div>
+        <span className="flex-1 font-montserrat font-semibold text-sm sm:text-base text-white">{q}</span>
+        <ChevronDown className={`w-5 h-5 text-cyan-400 transition-transform duration-300 shrink-0 ${open ? "rotate-180" : ""}`} />
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="overflow-hidden"
+          >
+            <p className="px-4 sm:px-5 pb-4 sm:pb-5 pl-[3.75rem] sm:pl-[4.5rem] text-sm text-gray-300 leading-relaxed">{a}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// MAIN PAGE
+// ══════════════════════════════════════════════════════════════════════════════
+export default function Home() {
+  const [formName, setFormName] = useState("");
+  const [formPhone, setFormPhone] = useState("");
+  const [formSent, setFormSent] = useState(false);
+  const [showSticky, setShowSticky] = useState(false);
+  const [stock] = useState(47);
 
   useEffect(() => {
-    const onScroll = () => setVisible(window.scrollY > 600);
+    const onScroll = () => setShowSticky(window.scrollY > 700);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  return (
-    <motion.div
-      className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4"
-      initial={{ y: 100 }}
-      animate={{ y: visible ? 0 : 100 }}
-      transition={{ type: "spring", stiffness: 300, damping: 30 }}
-    >
-      <div
-        className="max-w-lg mx-auto rounded-2xl p-4 flex items-center justify-between gap-4"
-        style={{
-          background: "rgba(5,13,26,0.95)",
-          border: "1px solid rgba(0,229,255,0.3)",
-          backdropFilter: "blur(20px)",
-          boxShadow: "0 -4px 30px rgba(0,0,0,0.5), 0 0 20px rgba(0,229,255,0.1)",
-        }}
-      >
-        <div>
-          <p className="text-xs text-gray-400">Midea ALBA</p>
-          <div className="flex items-center gap-2">
-            <span className="font-bebas text-2xl" style={{ color: "#FFD600" }}>360$</span>
-            <span className="text-sm text-gray-500 line-through">450$</span>
-          </div>
-        </div>
-        <a
-          href="#lead-form"
-          className="btn-cta text-base px-6 py-3"
-          style={{ fontSize: "1rem", padding: "0.75rem 1.5rem" }}
-        >
-          КУПИТЬ СЕЙЧАС
-        </a>
-      </div>
-    </motion.div>
-  );
-}
-
-// ── Main Page ─────────────────────────────────────────────────────────────────
-export default function Home() {
-  const [timeLeft, setTimeLeft] = useState({ hours: 23, minutes: 47, seconds: 12 });
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        let { hours, minutes, seconds } = prev;
-        seconds--;
-        if (seconds < 0) { seconds = 59; minutes--; }
-        if (minutes < 0) { minutes = 59; hours--; }
-        if (hours < 0) { hours = 23; minutes = 59; seconds = 59; }
-        return { hours, minutes, seconds };
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const pad = (n: number) => String(n).padStart(2, "0");
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    const phoneDigits = formPhone.replace(/\D/g, "");
+    if (!formName.trim() || phoneDigits.length < 9) {
+      alert(formName.trim() ? "Введите корректный номер телефона" : "Введите ваше имя");
+      return;
+    }
+    setFormSent(true);
+    setTimeout(() => setFormSent(false), 5000);
+    setFormName("");
+    setFormPhone("");
+  };
 
   return (
-    <div className="min-h-screen circuit-bg" style={{ fontFamily: "'Montserrat', sans-serif" }}>
-      {/* ── HEADER ── */}
-      <header
-        className="fixed top-0 left-0 right-0 z-40 px-4 py-3"
-        style={{
-          background: "rgba(5,13,26,0.9)",
-          borderBottom: "1px solid rgba(0,229,255,0.15)",
-          backdropFilter: "blur(20px)",
-        }}
-      >
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="font-bebas text-2xl" style={{ color: "#00E5FF", letterSpacing: "0.1em" }}>
-              WELKIN
-            </span>
-            <span className="text-gray-500 text-lg">×</span>
-            <span className="font-bebas text-2xl text-white">MIDEA</span>
+    <div className="min-h-screen bg-[#050D1A] text-white overflow-x-hidden">
+
+      {/* ═══ HEADER ═══ */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-[#050D1A]/90 backdrop-blur-md border-b border-cyan-900/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-14 sm:h-16">
+          <div className="font-bebas text-lg sm:text-xl tracking-wider">
+            <span className="text-cyan-400">WELKIN</span>
+            <span className="text-gray-500 mx-1">&times;</span>
+            <span className="text-white">MIDEA</span>
           </div>
-          <div className="hidden md:flex items-center gap-2 text-sm text-gray-400">
-            <span>📞</span>
-            <span>+998 99 892 36 02</span>
+          <div className="hidden md:flex items-center gap-5">
+            <a href={PHONE_HREF} className="flex items-center gap-2 text-sm text-gray-300 hover:text-cyan-400 transition-colors">
+              <Phone className="w-4 h-4" /> {PHONE}
+            </a>
+            <a href={TELEGRAM_LINK} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-gray-300 hover:text-cyan-400 transition-colors">
+              <MessageCircle className="w-4 h-4" /> Telegram
+            </a>
           </div>
-          <a href="#lead-form" className="btn-cta" style={{ fontSize: "0.9rem", padding: "0.6rem 1.5rem" }}>
-            КУПИТЬ ЗА 360$
+          {/* Mobile phone icon */}
+          <a href={PHONE_HREF} className="md:hidden shrink-0 w-9 h-9 rounded-lg bg-green-600/20 border border-green-500/30 flex items-center justify-center text-green-400 hover:bg-green-600/30 transition-all">
+            <Phone className="w-4 h-4" />
           </a>
+          <PulseCTA text="КУПИТЬ ЗА 360$" onClick={() => scrollTo("lead-form")} size="sm" />
         </div>
       </header>
 
-      {/* ── HERO ── */}
-      <section
-        className="relative min-h-screen flex items-center overflow-hidden"
-        style={{
-          paddingTop: "80px",
-          background: `linear-gradient(to bottom, rgba(5,13,26,0.7) 0%, rgba(5,13,26,0.9) 100%), url(${HERO_BG}) center/cover no-repeat`,
-        }}
-      >
-        {/* Animated circuit lines */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            backgroundImage: `
-              linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px)
-            `,
-            backgroundSize: "60px 60px",
-          }}
-        />
+      {/* ═══ HERO ═══ */}
+      <section className="relative min-h-screen flex items-center pt-16" style={{ backgroundImage: `url(${IMG.heroBg})`, backgroundSize: "cover", backgroundPosition: "center" }}>
+        <div className="absolute inset-0 bg-gradient-to-r from-[#050D1A]/95 via-[#050D1A]/80 to-[#050D1A]/50" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#050D1A] via-transparent to-transparent" />
 
-        <div className="max-w-6xl mx-auto px-4 py-20 w-full">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            {/* Left: Text */}
-            <div>
-              {/* Urgency badge */}
-              <motion.div
-                className="inline-flex items-center gap-2 mb-6"
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-              >
-                <span className="urgency-badge">🔥 АКЦИЯ ОГРАНИЧЕНА</span>
-                <span className="text-gray-400 text-sm">Осталось: <span style={{ color: "#FF3B30", fontWeight: 700 }}>47 штук</span></span>
-              </motion.div>
-
-              {/* Main headline */}
-              <motion.h1
-                className="font-bebas leading-none mb-4"
-                style={{ fontSize: "clamp(3rem, 8vw, 6rem)", letterSpacing: "0.02em" }}
-                initial={{ opacity: 0, x: -50 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6, delay: 0.1 }}
-              >
-                <span className="text-white">УМНЫЙ</span>
-                <br />
-                <span style={{ color: "#00E5FF" }}>КОНДИЦИОНЕР</span>
-                <br />
-                <span className="text-white">ЗА </span>
-                <span style={{ color: "#FFD600" }}>360$</span>
-              </motion.h1>
-
-              {/* Subheadline */}
-              <motion.p
-                className="text-gray-300 text-lg mb-8 leading-relaxed"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.3 }}
-              >
-                Midea ALBA — охлаждает за <strong style={{ color: "#00E5FF" }}>3 минуты</strong>,
-                работает тише <strong style={{ color: "#00E5FF" }}>19 дБ</strong>,
-                экономит <strong style={{ color: "#FFD600" }}>200$ в год</strong> на электричестве
-              </motion.p>
-
-              {/* Hex badges */}
-              <motion.div
-                className="flex flex-wrap gap-3 mb-8"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.4 }}
-              >
-                <HexBadge icon="🤖" label="AI" sub="EcoMaster" />
-                <HexBadge icon="📶" label="Wi-Fi" sub="Control" />
-                <HexBadge icon="🔇" label="19 дБ" sub="Тишина" />
-                <HexBadge icon="🛡️" label="Prime" sub="Guard" />
-                <HexBadge icon="⚡" label="от 145V" sub="Защита" />
-                <HexBadge icon="♻️" label="Инвертор" sub="-60%" />
-              </motion.div>
-
-              {/* CTA */}
-              <motion.div
-                className="flex flex-col sm:flex-row gap-4 items-start"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-              >
-                <a href="#lead-form" className="btn-cta text-xl">
-                  КУПИТЬ ЗА 360$ <span className="price-old text-base ml-2">450$</span>
-                </a>
-              </motion.div>
-
-              {/* Trust signals */}
-              <motion.div
-                className="flex flex-wrap gap-4 mt-6 text-sm text-gray-400"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.6 }}
-              >
-                <span>✅ Бесплатная установка</span>
-                <span>✅ Гарантия 3 года</span>
-                <span>✅ Доставка по Ташкенту</span>
-              </motion.div>
-            </div>
-
-            {/* Right: Product image */}
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 w-full grid lg:grid-cols-2 gap-8 lg:gap-12 items-center py-16 sm:py-0">
+          {/* Left */}
+          <div className="space-y-5 sm:space-y-6">
+            {/* Urgency badge */}
             <motion.div
-              className="relative flex justify-center items-center"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
+              className="inline-flex items-center gap-2 bg-red-600/20 border border-red-500/40 rounded-full px-4 py-1.5"
+              animate={{ scale: [1, 1.03, 1] }}
+              transition={{ duration: 2, repeat: Infinity }}
             >
-              <div
-                className="absolute inset-0 rounded-full"
-                style={{
-                  background: "radial-gradient(circle, rgba(0,229,255,0.15) 0%, transparent 70%)",
-                  filter: "blur(40px)",
-                }}
-              />
-              <img
-                src={AC_HERO}
-                alt="Midea ALBA кондиционер"
-                className="relative z-10 w-full max-w-lg animate-float"
-                style={{ filter: "drop-shadow(0 0 30px rgba(0,229,255,0.3))" }}
-              />
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+              <span className="text-red-400 font-montserrat font-bold text-xs sm:text-sm uppercase tracking-wide">
+                Акция — осталось {stock} штук
+              </span>
             </motion.div>
+
+            {/* Headline */}
+            <h1 className="font-bebas leading-[0.9] tracking-tight">
+              <span className="block text-4xl sm:text-6xl lg:text-7xl text-white">+45°C НА УЛИЦЕ?</span>
+              <span className="block text-5xl sm:text-7xl lg:text-[5.5rem] text-cyan-400 neon-cyan">+22°C ДОМА</span>
+              <span className="block text-4xl sm:text-6xl lg:text-7xl text-white">ЗА <span className="text-yellow-400">3 МИНУТЫ</span></span>
+            </h1>
+
+            {/* Subheadline */}
+            <p className="font-montserrat text-sm sm:text-lg text-gray-300 max-w-lg leading-relaxed">
+              <span className="text-white font-bold">Midea ALBA</span> — AI-кондиционер, который работает <span className="text-cyan-400 font-semibold">тише шёпота</span>,
+              экономит <span className="text-yellow-400 font-bold">200$/год</span> и управляется с телефона
+            </p>
+
+            {/* Social proof */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex -space-x-2">
+                {["А", "Д", "Б", "М", "С"].map((letter, i) => (
+                  <div key={i} className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 border-2 border-[#050D1A] flex items-center justify-center text-xs font-bold">
+                    {letter}
+                  </div>
+                ))}
+              </div>
+              <div className="text-sm">
+                <div className="flex items-center gap-1 text-yellow-400">
+                  {[...Array(5)].map((_, i) => <Star key={i} className="w-3.5 h-3.5 fill-yellow-400" />)}
+                  <span className="text-white ml-1 font-bold">4.9</span>
+                </div>
+                <span className="text-gray-400 text-xs">500+ довольных клиентов</span>
+              </div>
+            </div>
+
+            {/* Price */}
+            <div className="flex items-end gap-3 sm:gap-4">
+              <span className="font-bebas text-5xl sm:text-7xl text-yellow-400 neon-yellow">360$</span>
+              <span className="font-bebas text-2xl sm:text-4xl text-gray-500 line-through mb-1 sm:mb-2">450$</span>
+              <span className="bg-red-600 text-white font-montserrat font-bold text-xs sm:text-sm px-2.5 py-1 rounded-lg mb-2 sm:mb-3 animate-pulse">-20%</span>
+            </div>
+
+            {/* CTA */}
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+              <PulseCTA text="КУПИТЬ ЗА 360$" onClick={() => scrollTo("lead-form")} size="lg" />
+              <a
+                href={TELEGRAM_LINK}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-bebas text-lg sm:text-xl px-6 sm:px-8 py-3 sm:py-4 rounded-xl bg-[#0088cc] text-white hover:bg-[#0099dd] transition-all text-center flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(0,136,204,0.3)]"
+              >
+                <MessageCircle className="w-5 h-5" />
+                НАПИСАТЬ В TELEGRAM
+              </a>
+            </div>
+
+            {/* Trust badges */}
+            <div className="flex flex-wrap gap-3 sm:gap-5 text-xs sm:text-sm text-gray-400">
+              <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-green-400" /> Бесплатная установка</span>
+              <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-green-400" /> Гарантия 3 года</span>
+              <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-green-400" /> Рассрочка 0%</span>
+            </div>
+          </div>
+
+          {/* Right — Product image */}
+          <div className="relative hidden lg:flex items-center justify-center">
+            <motion.div
+              className="absolute w-[480px] h-[480px] rounded-full bg-cyan-500/5 border border-cyan-500/10"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
+            />
+            <motion.img
+              src={IMG.acHero}
+              alt="Midea ALBA"
+              className="relative z-10 w-full max-w-[520px] drop-shadow-[0_0_60px_rgba(0,200,255,0.3)]"
+              initial={{ opacity: 0, x: 60 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 1, delay: 0.3 }}
+            />
+            {/* Neon glow rings */}
+            <motion.div
+              className="absolute w-[400px] h-[400px] rounded-full border border-cyan-500/10"
+              animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.6, 0.3] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+            />
+            <motion.div
+              className="absolute w-[350px] h-[350px] rounded-full border border-cyan-400/5"
+              animate={{ scale: [1.1, 1, 1.1], opacity: [0.2, 0.5, 0.2] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+            />
           </div>
         </div>
 
-        {/* Countdown timer */}
-        <div
-          className="absolute bottom-0 left-0 right-0 py-4"
-          style={{
-            background: "rgba(0,0,0,0.5)",
-            borderTop: "1px solid rgba(255,214,0,0.3)",
-          }}
-        >
-          <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <span className="text-gray-300 text-sm font-semibold">⏰ Акция заканчивается через:</span>
-            <div className="flex gap-3 items-center">
-              {[
-                { val: pad(timeLeft.hours), label: "часов" },
-                { val: pad(timeLeft.minutes), label: "минут" },
-                { val: pad(timeLeft.seconds), label: "секунд" },
-              ].map(({ val, label }, i) => (
-                <div key={i} className="flex flex-col items-center">
-                  <span
-                    className="font-orbitron text-2xl font-bold"
-                    style={{ color: "#FFD600", minWidth: "2.5rem", textAlign: "center" }}
-                  >
-                    {val}
-                  </span>
-                  <span className="text-xs text-gray-500">{label}</span>
-                </div>
-              ))}
+        {/* Countdown at bottom of hero */}
+        <div className="absolute bottom-4 sm:bottom-8 left-0 right-0 z-10">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6">
+            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-5">
+              <div className="flex items-center gap-2 text-sm text-gray-400">
+                <Clock className="w-4 h-4 text-red-400 animate-pulse" />
+                <span className="font-montserrat">Акция заканчивается через:</span>
+              </div>
+              <Countdown />
             </div>
           </div>
         </div>
+
+        {/* Scroll indicator */}
+        <motion.div
+          className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 hidden sm:block"
+          animate={{ y: [0, 8, 0] }}
+          transition={{ duration: 2, repeat: Infinity }}
+        >
+          <ArrowDown className="w-5 h-5 text-cyan-400/40" />
+        </motion.div>
       </section>
 
-      {/* ── PAIN POINTS ── */}
-      <section className="py-20 px-4" style={{ background: "rgba(0,0,0,0.3)" }}>
-        <div className="max-w-4xl mx-auto">
-          <motion.div
-            className="text-center mb-12"
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <h2 className="font-bebas text-5xl text-white mb-3" style={{ letterSpacing: "0.05em" }}>
-              УЗНАЁШЬ СЕБЯ?
-            </h2>
-            <p className="text-gray-400">Типичные проблемы с обычными кондиционерами</p>
-          </motion.div>
-          <div className="grid sm:grid-cols-2 gap-4">
-            <PainCard emoji="😤" pain="Кондей шумит как трактор — не могу спать" solution="ALBA работает тише шёпота — всего 19 дБ" />
-            <PainCard emoji="💸" pain="Счёт за электричество вырос в 2 раза" solution="AI EcoMaster экономит до 60% электроэнергии" />
-            <PainCard emoji="📵" pain="Нельзя включить кондей до прихода домой" solution="Wi-Fi управление с телефона из любой точки мира" />
-            <PainCard emoji="🔥" pain="Жара +45°C, а кондей охлаждает 20 минут" solution="Охлаждает комнату за 3 минуты на полной мощности" />
-            <PainCard emoji="⚡" pain="Скачки напряжения сожгли предыдущий кондей" solution="Prime Guard защищает от 145V — работает при любом напряжении" />
-            <PainCard emoji="🌡️" pain="Температура скачет — то жарко, то холодно" solution="Точность ±0.5°C — AI сам поддерживает нужный климат" />
+      {/* ═══ PAIN POINTS — "УЗНАЁШЬ СЕБЯ?" ═══ */}
+      <Section id="pains" className="py-16 sm:py-24 bg-[#050D1A]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="text-center mb-10 sm:mb-16">
+            <h2 className="font-bebas text-4xl sm:text-6xl lg:text-7xl text-white">УЗНАЁШЬ <span className="text-red-500">СЕБЯ</span>?</h2>
+            <p className="font-montserrat text-gray-400 mt-2 sm:mt-3 text-sm sm:text-lg max-w-2xl mx-auto">Эти проблемы знакомы каждому владельцу обычного кондиционера</p>
           </div>
-        </div>
-      </section>
 
-      {/* ── STATS ── */}
-      <section className="py-16 px-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
             {[
-              { val: 360, suffix: "$", label: "Цена вместо 450$", color: "#FFD600" },
-              { val: 19, suffix: " дБ", label: "Уровень шума", color: "#00E5FF" },
-              { val: 60, suffix: "%", label: "Экономия электричества", color: "#4CD964" },
-              { val: 200, suffix: "$", label: "Экономия в год", color: "#FFD600" },
-            ].map((stat, i) => (
+              { icon: <Volume2 className="w-6 h-6" />, pain: "Кондей шумит как трактор", detail: "Невозможно спать, дети просыпаются", solution: "ALBA — всего 19 дБ, тише шёпота", borderColor: "border-red-500/30 hover:border-red-400", iconBg: "bg-red-500/15 text-red-400" },
+              { icon: <Zap className="w-6 h-6" />, pain: "Счёт за свет вырос в 2 раза", detail: "Кондиционер жрёт электричество", solution: "AI EcoMaster экономит до 60%", borderColor: "border-orange-500/30 hover:border-orange-400", iconBg: "bg-orange-500/15 text-orange-400" },
+              { icon: <Wifi className="w-6 h-6" />, pain: "Нельзя включить до прихода домой", detail: "Приходишь в раскалённую квартиру", solution: "Wi-Fi управление с телефона", borderColor: "border-blue-500/30 hover:border-blue-400", iconBg: "bg-blue-500/15 text-blue-400" },
+              { icon: <ThermometerSun className="w-6 h-6" />, pain: "+45°C, а кондей охлаждает 20 мин", detail: "Пока остынет — уже вспотел", solution: "ALBA охлаждает за 3 минуты!", borderColor: "border-yellow-500/30 hover:border-yellow-400", iconBg: "bg-yellow-500/15 text-yellow-400" },
+              { icon: <Shield className="w-6 h-6" />, pain: "Скачки напряжения сожгли кондей", detail: "Ремонт стоил дороже нового", solution: "Prime Guard — защита от 145V", borderColor: "border-purple-500/30 hover:border-purple-400", iconBg: "bg-purple-500/15 text-purple-400" },
+              { icon: <Snowflake className="w-6 h-6" />, pain: "Температура скачет ±3°C", detail: "То жарко, то холодно — нестабильно", solution: "Точность ±0.5°C — AI держит климат", borderColor: "border-teal-500/30 hover:border-teal-400", iconBg: "bg-teal-500/15 text-teal-400" },
+            ].map((item, i) => (
               <motion.div
                 key={i}
-                className="text-center p-6 rounded-2xl dark-card"
-                initial={{ opacity: 0, scale: 0.8 }}
+                className={`relative rounded-2xl border ${item.borderColor} bg-[#0a1628]/60 p-5 sm:p-6 transition-all duration-300 group`}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.08 }}
+                whileHover={{ y: -4, scale: 1.02 }}
+              >
+                <div className={`w-12 h-12 rounded-xl ${item.iconBg} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+                  {item.icon}
+                </div>
+                <p className="font-montserrat font-bold text-white text-base sm:text-lg">{item.pain}</p>
+                <p className="font-montserrat text-gray-500 text-sm mt-1">{item.detail}</p>
+                <div className="mt-4 pt-3 border-t border-white/5">
+                  <p className="font-montserrat font-bold text-sm text-green-400 flex items-center gap-2">
+                    <Check className="w-4 h-4 shrink-0" />
+                    {item.solution}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* CTA after pains */}
+          <div className="text-center mt-10 sm:mt-14">
+            <p className="font-montserrat text-gray-400 text-sm sm:text-base mb-4">Хватит мучиться — есть решение!</p>
+            <PulseCTA text="РЕШИТЬ ВСЕ ПРОБЛЕМЫ ЗА 360$" onClick={() => scrollTo("lead-form")} size="md" />
+          </div>
+        </div>
+      </Section>
+
+      {/* ═══ KEY NUMBERS ═══ */}
+      <Section className="py-14 sm:py-20 bg-gradient-to-b from-[#050D1A] via-[#081525] to-[#050D1A]">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+            {[
+              { end: 360, prefix: "", suffix: "$", label: "Цена вместо 450$", color: "text-yellow-400", borderColor: "border-yellow-500/20 hover:border-yellow-500/50", icon: <Sparkles className="w-6 h-6 text-yellow-400" /> },
+              { end: 19, prefix: "", suffix: " дБ", label: "Тише шёпота", color: "text-cyan-400", borderColor: "border-cyan-500/20 hover:border-cyan-500/50", icon: <Volume2 className="w-6 h-6 text-cyan-400" /> },
+              { end: 60, prefix: "-", suffix: "%", label: "Экономия электричества", color: "text-green-400", borderColor: "border-green-500/20 hover:border-green-500/50", icon: <BatteryCharging className="w-6 h-6 text-green-400" /> },
+              { end: 200, prefix: "", suffix: "$/год", label: "Экономия на счетах", color: "text-emerald-400", borderColor: "border-emerald-500/20 hover:border-emerald-500/50", icon: <Zap className="w-6 h-6 text-emerald-400" /> },
+            ].map((item, i) => (
+              <motion.div
+                key={i}
+                className={`text-center p-4 sm:p-7 rounded-2xl bg-[#0a1628]/60 border ${item.borderColor} transition-all duration-300`}
+                initial={{ opacity: 0, scale: 0.9 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
+                whileHover={{ y: -3 }}
               >
-                <div
-                  className="font-bebas text-5xl mb-1"
-                  style={{ color: stat.color, fontFamily: "'Orbitron', sans-serif" }}
-                >
-                  <AnimatedCounter end={stat.val} suffix={stat.suffix} />
+                <div className="mb-2 sm:mb-3 flex justify-center">{item.icon}</div>
+                <div className={`font-bebas text-3xl sm:text-5xl lg:text-6xl ${item.color}`}>
+                  <Counter end={item.end} prefix={item.prefix} suffix={item.suffix} />
                 </div>
-                <p className="text-gray-400 text-xs">{stat.label}</p>
+                <p className="font-montserrat text-gray-400 text-xs sm:text-sm mt-1 sm:mt-2">{item.label}</p>
               </motion.div>
             ))}
           </div>
         </div>
-      </section>
+      </Section>
 
-      {/* ── FEATURES ── */}
-      <section className="py-20 px-4" style={{ background: "rgba(0,0,0,0.2)" }}>
-        <div className="max-w-6xl mx-auto">
-          <motion.div
-            className="text-center mb-14"
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <h2 className="font-bebas text-5xl text-white mb-3" style={{ letterSpacing: "0.05em" }}>
-              6 ПРИЧИН ВЫБРАТЬ <span style={{ color: "#00E5FF" }}>ALBA</span>
-            </h2>
-            <p className="text-gray-400">Технологии, которые меняют комфорт</p>
-          </motion.div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <FeatureCard
-              icon="🤖"
-              title="AI ECOMASTER"
-              desc="Искусственный интеллект анализирует температуру, влажность и активность людей в комнате. Автоматически подбирает оптимальный режим."
-              highlight="Экономия до 60% на электричестве"
-            />
-            <FeatureCard
-              icon="📶"
-              title="WI-FI УПРАВЛЕНИЕ"
-              desc="Управляйте кондиционером с телефона через приложение Midea Air. Голосовое управление через Алису и Google Assistant."
-              highlight="Включай за 30 минут до прихода домой"
-            />
-            <FeatureCard
-              icon="🔇"
-              title="19 ДБ ТИШИНА"
-              desc="Тише человеческого шёпота (30 дБ). Идеально для спальни, детской комнаты и рабочего кабинета. Спите без помех."
-              highlight="Обычный кондей — 45 дБ. ALBA — 19 дБ"
-            />
-            <FeatureCard
-              icon="🛡️"
-              title="PRIME GUARD"
-              desc="Защита компрессора от скачков напряжения. Работает при напряжении от 145V. Защищает от перегрева и замерзания."
-              highlight="Гарантия 3 года на весь кондиционер"
-            />
-            <FeatureCard
-              icon="⚡"
-              title="ОХЛАЖДАЕТ ЗА 3 МИН"
-              desc="Режим Turbo Cool мгновенно охлаждает комнату до нужной температуры. Снижает с +45°C до +22°C за 3 минуты."
-              highlight="Точность поддержания температуры ±0.5°C"
-            />
-            <FeatureCard
-              icon="♻️"
-              title="ИНВЕРТОР"
-              desc="Инверторный компрессор не выключается полностью, а снижает мощность. Нет резких пусков — меньше износ и расход энергии."
-              highlight="Экономия 200$ в год на электричестве"
-            />
+      {/* ═══ CREATIVE GALLERY — 6 Reasons ═══ */}
+      <Section className="py-14 sm:py-20 bg-[#050D1A]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="text-center mb-10 sm:mb-14">
+            <h2 className="font-bebas text-4xl sm:text-6xl lg:text-7xl text-white">6 ПРИЧИН <span className="text-cyan-400">ВЫБРАТЬ ALBA</span></h2>
+            <p className="font-montserrat text-gray-400 mt-2 text-sm sm:text-lg">Технологии, которые меняют ваш комфорт навсегда</p>
           </div>
-        </div>
-      </section>
 
-      {/* ── FEATURE SHOWCASE: SAVINGS ── */}
-      <section className="py-20 px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <motion.div
-              initial={{ opacity: 0, x: -40 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-            >
-              <span className="font-bebas text-lg" style={{ color: "#FFD600", letterSpacing: "0.1em" }}>
-                ЭКОНОМИЯ
-              </span>
-              <h2 className="font-bebas text-5xl text-white mt-2 mb-4" style={{ letterSpacing: "0.03em" }}>
-                КОНДЕЙ, КОТОРЫЙ<br />
-                <span style={{ color: "#4CD964" }}>ПЛАТИТ СЕБЕ</span>
-              </h2>
-              <p className="text-gray-300 leading-relaxed mb-6">
-                AI EcoMaster анализирует потребление и автоматически снижает мощность, когда комната достигла нужной температуры. Результат — экономия <strong style={{ color: "#FFD600" }}>до 200$ в год</strong> на электричестве.
-              </p>
-              <div className="space-y-3">
-                {[
-                  { label: "Экономия на электричестве", val: "-60%", color: "#4CD964" },
-                  { label: "Экономия в год", val: "200$", color: "#FFD600" },
-                  { label: "Срок окупаемости", val: "1.5 года", color: "#00E5FF" },
-                ].map((item, i) => (
-                  <div key={i} className="flex items-center justify-between p-4 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                    <span className="text-gray-300 text-sm">{item.label}</span>
-                    <span className="font-orbitron font-bold text-lg" style={{ color: item.color }}>{item.val}</span>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-            <motion.div
-              className="relative"
-              initial={{ opacity: 0, x: 40 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-            >
-              <img src={SAVINGS_IMG} alt="Экономия на электричестве" className="w-full rounded-2xl" style={{ boxShadow: "0 0 40px rgba(76,217,100,0.2)" }} />
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── FEATURE SHOWCASE: WIFI ── */}
-      <section className="py-20 px-4" style={{ background: "rgba(0,0,0,0.2)" }}>
-        <div className="max-w-6xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <motion.div
-              className="order-2 lg:order-1 relative"
-              initial={{ opacity: 0, x: -40 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-            >
-              <img src={WIFI_IMG} alt="Wi-Fi управление" className="w-full rounded-2xl" style={{ boxShadow: "0 0 40px rgba(0,229,255,0.2)" }} />
-            </motion.div>
-            <motion.div
-              className="order-1 lg:order-2"
-              initial={{ opacity: 0, x: 40 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-            >
-              <span className="font-bebas text-lg" style={{ color: "#00E5FF", letterSpacing: "0.1em" }}>
-                УМНЫЙ ДОМ
-              </span>
-              <h2 className="font-bebas text-5xl text-white mt-2 mb-4" style={{ letterSpacing: "0.03em" }}>
-                УПРАВЛЯЙ<br />
-                <span style={{ color: "#00E5FF" }}>С ТЕЛЕФОНА!</span>
-              </h2>
-              <p className="text-gray-300 leading-relaxed mb-6">
-                Приложение Midea Air позволяет управлять кондиционером из любой точки мира. Включи за 30 минут до прихода домой — заходи в прохладу.
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { icon: "📱", label: "Midea App" },
-                  { icon: "🎤", label: "Голосовое управление" },
-                  { icon: "🏠", label: "Умный дом" },
-                  { icon: "📅", label: "Расписание" },
-                ].map((item, i) => (
-                  <div key={i} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: "rgba(0,229,255,0.05)", border: "1px solid rgba(0,229,255,0.2)" }}>
-                    <span className="text-2xl">{item.icon}</span>
-                    <span className="text-sm text-gray-300 font-semibold">{item.label}</span>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── FEATURE SHOWCASE: SILENT ── */}
-      <section className="py-20 px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <motion.div
-              initial={{ opacity: 0, x: -40 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-            >
-              <span className="font-bebas text-lg" style={{ color: "#4CD964", letterSpacing: "0.1em" }}>
-                ТИШИНА
-              </span>
-              <h2 className="font-bebas text-5xl text-white mt-2 mb-4" style={{ letterSpacing: "0.03em" }}>
-                ТИШЕ ЧЕМ<br />
-                <span style={{ color: "#4CD964" }}>ТВОЙ ШЁПОТ</span>
-              </h2>
-              <p className="text-gray-300 leading-relaxed mb-6">
-                Обычный кондиционер шумит как 45 дБ — это уровень шумного офиса. ALBA работает на 19 дБ — тише человеческого шёпота. Идеально для сна и работы.
-              </p>
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between mb-1">
-                    <span className="text-sm text-gray-400">Обычный кондей</span>
-                    <span className="text-sm font-bold" style={{ color: "#FF3B30" }}>45 дБ</span>
-                  </div>
-                  <div className="h-3 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.1)" }}>
-                    <motion.div
-                      className="h-full rounded-full"
-                      style={{ background: "linear-gradient(90deg, #FF3B30, #FF6B35)" }}
-                      initial={{ width: 0 }}
-                      whileInView={{ width: "90%" }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 1, delay: 0.2 }}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between mb-1">
-                    <span className="text-sm text-gray-400">Midea ALBA</span>
-                    <span className="text-sm font-bold" style={{ color: "#4CD964" }}>19 дБ</span>
-                  </div>
-                  <div className="h-3 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.1)" }}>
-                    <motion.div
-                      className="h-full rounded-full"
-                      style={{ background: "linear-gradient(90deg, #4CD964, #00E5FF)" }}
-                      initial={{ width: 0 }}
-                      whileInView={{ width: "38%" }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 1, delay: 0.4 }}
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="flex gap-4 mt-6">
-                <div className="flex items-center gap-2 text-sm text-gray-400">
-                  <span>🛏️</span> Спальня
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-400">
-                  <span>👶</span> Детская
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-400">
-                  <span>💼</span> Офис
-                </div>
-              </div>
-            </motion.div>
-            <motion.div
-              className="relative"
-              initial={{ opacity: 0, x: 40 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-            >
-              <img src={SILENT_IMG} alt="Тишина 19 дБ" className="w-full rounded-2xl" style={{ boxShadow: "0 0 40px rgba(76,217,100,0.2)" }} />
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── COMPARISON ── */}
-      <section className="py-20 px-4" style={{ background: "rgba(0,0,0,0.3)" }}>
-        <div className="max-w-4xl mx-auto">
-          <motion.div
-            className="text-center mb-12"
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <h2 className="font-bebas text-5xl text-white mb-3" style={{ letterSpacing: "0.05em" }}>
-              ALBA VS <span style={{ color: "#FF3B30" }}>ОБЫЧНЫЙ КОНДЕЙ</span>
-            </h2>
-          </motion.div>
-          <div className="dark-card rounded-2xl overflow-hidden">
-            <ComparisonTable />
-          </div>
-        </div>
-      </section>
-
-      {/* ── REVIEWS ── */}
-      <section className="py-20 px-4">
-        <div className="max-w-6xl mx-auto">
-          <motion.div
-            className="text-center mb-12"
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <h2 className="font-bebas text-5xl text-white mb-3" style={{ letterSpacing: "0.05em" }}>
-              ЧТО ГОВОРЯТ <span style={{ color: "#FFD600" }}>КЛИЕНТЫ</span>
-            </h2>
-            <p className="text-gray-400">Более 500 довольных покупателей по всему Узбекистану</p>
-          </motion.div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <ReviewCard
-              name="Акбар Рашидов"
-              city="Ташкент, Юнусабад"
-              text="Купил месяц назад — счёт за свет реально снизился. Жена довольна — тихо работает, не мешает спать. Рекомендую!"
-              rating={5}
-            />
-            <ReviewCard
-              name="Дилноза Каримова"
-              city="Ташкент, Мирзо-Улугбек"
-              text="Управляю с телефона — это просто космос! Включаю за 20 минут до прихода домой. Дети в детской спят отлично."
-              rating={5}
-            />
-            <ReviewCard
-              name="Бахром Усманов"
-              city="Ташкент, Чиланзар"
-              text="У нас напряжение скачет — старый кондей сгорел. ALBA работает без проблем уже 3 месяца. Prime Guard — реально работает."
-              rating={5}
-            />
-            <ReviewCard
-              name="Малика Юсупова"
-              city="Ташкент, Сергели"
-              text="Охлаждает очень быстро. Жара +45 на улице, а дома +22 через 5 минут. Установщики приехали в тот же день!"
-              rating={5}
-            />
-            <ReviewCard
-              name="Санжар Тошматов"
-              city="Ташкент, Бектемир"
-              text="Взял в рассрочку 0%. Переплаты нет. Кондей отличный — тихий, умный, красивый. Welkin — надёжные ребята."
-              rating={5}
-            />
-            <ReviewCard
-              name="Гульнора Хасанова"
-              city="Ташкент, Яккасарай"
-              text="Муж скептически относился к 'умному' кондею. Теперь сам управляет с телефона и хвастается перед друзьями 😄"
-              rating={5}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* ── PRICE & OFFER ── */}
-      <section className="py-20 px-4" style={{ background: "rgba(0,0,0,0.4)" }}>
-        <div className="max-w-4xl mx-auto text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <span className="urgency-badge text-base px-4 py-2 mb-6 inline-block">
-              🔥 СПЕЦИАЛЬНАЯ ЦЕНА — ОГРАНИЧЕННОЕ ВРЕМЯ
-            </span>
-            <h2 className="font-bebas text-7xl mt-6 mb-2" style={{ color: "#FFD600", letterSpacing: "0.05em", lineHeight: 1 }}>
-              360$
-            </h2>
-            <p className="text-gray-400 text-xl mb-2">
-              <span className="line-through">Обычная цена: 450$</span>
-            </p>
-            <p className="text-2xl font-bold mb-8" style={{ color: "#4CD964" }}>
-              Вы экономите 90$ прямо сейчас!
-            </p>
-
-            <div className="grid sm:grid-cols-3 gap-4 mb-10">
-              {[
-                { icon: "🚚", title: "Бесплатная доставка", sub: "По всему Ташкенту" },
-                { icon: "🔧", title: "Бесплатная установка", sub: "Мастер приедет в тот же день" },
-                { icon: "📋", title: "Гарантия 3 года", sub: "Официальная гарантия Midea" },
-              ].map((item, i) => (
-                <div key={i} className="p-5 rounded-xl" style={{ background: "rgba(0,229,255,0.05)", border: "1px solid rgba(0,229,255,0.2)" }}>
-                  <div className="text-3xl mb-2">{item.icon}</div>
-                  <p className="font-bold text-white text-sm">{item.title}</p>
-                  <p className="text-xs text-gray-400 mt-1">{item.sub}</p>
-                </div>
-              ))}
-            </div>
-
-            <a href="#lead-form" className="btn-cta text-2xl inline-block">
-              КУПИТЬ ЗА 360$ — СЭКОНОМИТЬ 90$
-            </a>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ── LEAD FORM ── */}
-      <section id="lead-form" className="py-20 px-4">
-        <div className="max-w-xl mx-auto">
-          <motion.div
-            className="rounded-3xl p-8 sm:p-12"
-            style={{
-              background: "rgba(10,22,40,0.9)",
-              border: "1px solid rgba(0,229,255,0.3)",
-              boxShadow: "0 0 60px rgba(0,229,255,0.1)",
-            }}
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <div className="text-center mb-8">
-              <h2 className="font-bebas text-4xl text-white mb-2" style={{ letterSpacing: "0.05em" }}>
-                ОСТАВЬ ЗАЯВКУ
-              </h2>
-              <p className="text-gray-400">
-                Получи <strong style={{ color: "#FFD600" }}>бесплатную консультацию</strong> и узнай точную цену с установкой
-              </p>
-              <div className="flex items-center justify-center gap-4 mt-4 text-sm text-gray-500">
-                <span>✅ Без предоплаты</span>
-                <span>✅ Ответим за 15 минут</span>
-              </div>
-            </div>
-            <LeadForm id="main-lead-form" />
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ── FAQ ── */}
-      <section className="py-20 px-4" style={{ background: "rgba(0,0,0,0.3)" }}>
-        <div className="max-w-3xl mx-auto">
-          <motion.div
-            className="text-center mb-12"
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <h2 className="font-bebas text-5xl text-white mb-3" style={{ letterSpacing: "0.05em" }}>
-              ЧАСТЫЕ ВОПРОСЫ
-            </h2>
-          </motion.div>
-          <div className="space-y-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
             {[
-              {
-                q: "Сколько стоит установка?",
-                a: "Установка БЕСПЛАТНАЯ при покупке кондиционера. Мастер приедет в тот же день или на следующий день.",
-              },
-              {
-                q: "Есть ли рассрочка?",
-                a: "Да! Рассрочка 0% на 6 и 12 месяцев. Никаких переплат. Уточните условия у менеджера.",
-              },
-              {
-                q: "Какая гарантия?",
-                a: "Официальная гарантия Midea — 3 года на весь кондиционер, 5 лет на компрессор.",
-              },
-              {
-                q: "Доставляете в регионы?",
-                a: "Да, доставляем по всему Узбекистану. Стоимость доставки уточняйте у менеджера.",
-              },
-              {
-                q: "Работает ли при низком напряжении?",
-                a: "Да! Prime Guard защищает кондиционер и позволяет работать при напряжении от 145V.",
-              },
-            ].map((item, i) => (
+              { img: IMG.robotAi, title: "AI ECOMASTER", desc: "ИИ анализирует температуру, влажность и активность", highlight: "Экономия до 60% на электричестве" },
+              { img: IMG.wifiControl, title: "WI-FI УПРАВЛЕНИЕ", desc: "Управляй с телефона из любой точки мира", highlight: "Включай за 30 мин до прихода" },
+              { img: IMG.soundWave, title: "19 ДБ ТИШИНА", desc: "Тише шёпота — для спальни и детской", highlight: "Обычный кондей — 45 дБ" },
+              { img: IMG.speedometer, title: "ОХЛАЖДАЕТ ЗА 3 МИН", desc: "Turbo Cool: с +45°C до +22°C мгновенно", highlight: "Точность температуры ±0.5°C" },
+              { img: IMG.moneyTree, title: "ЭКОНОМИТ 200$/ГОД", desc: "Инвертор + AI = минимальный расход", highlight: "Окупается за 1.5 года" },
+              { img: IMG.lifestyle, title: "PRIME GUARD", desc: "Защита от скачков — работает от 145V", highlight: "Гарантия 3 года на всё" },
+            ].map((card, i) => (
               <motion.div
                 key={i}
-                className="rounded-xl overflow-hidden"
-                style={{ border: "1px solid rgba(0,229,255,0.15)" }}
+                className="group relative rounded-2xl overflow-hidden border border-cyan-900/30 hover:border-cyan-500/40 transition-all duration-500 bg-[#0a1628]"
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.08 }}
+                whileHover={{ y: -5 }}
+              >
+                <div className="relative aspect-square overflow-hidden">
+                  <img src={card.img} alt={card.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" loading="lazy" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0a1628] via-[#0a1628]/30 to-transparent" />
+                  <div className="absolute bottom-3 left-4 right-4">
+                    <h3 className="font-bebas text-xl sm:text-2xl text-cyan-400 drop-shadow-lg">{card.title}</h3>
+                  </div>
+                </div>
+                <div className="p-4 sm:p-5">
+                  <p className="font-montserrat text-gray-300 text-xs sm:text-sm leading-relaxed">{card.desc}</p>
+                  <p className="font-montserrat text-green-400 text-xs sm:text-sm font-bold mt-2 flex items-center gap-1.5">
+                    <Check className="w-4 h-4 shrink-0" />{card.highlight}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </Section>
+
+      {/* ═══ COMPARISON TABLE ═══ */}
+      <Section id="comparison" className="py-14 sm:py-20 bg-gradient-to-b from-[#050D1A] via-[#081525] to-[#050D1A]">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6">
+          <h2 className="font-bebas text-4xl sm:text-6xl lg:text-7xl text-center mb-10 sm:mb-14">
+            ALBA VS <span className="text-red-500">ОБЫЧНЫЙ КОНДЕЙ</span>
+          </h2>
+
+          <div className="rounded-2xl border border-cyan-900/30 overflow-hidden bg-[#0a1628]/60">
+            {/* Header */}
+            <div className="grid grid-cols-3 bg-[#0a1628] border-b border-cyan-900/30">
+              <div className="p-3 sm:p-4 font-montserrat font-bold text-gray-400 text-xs sm:text-sm">Параметр</div>
+              <div className="p-3 sm:p-4 font-montserrat font-bold text-red-400 text-xs sm:text-sm text-center">Обычный</div>
+              <div className="p-3 sm:p-4 font-montserrat font-bold text-cyan-400 text-xs sm:text-sm text-center bg-cyan-500/5">MIDEA ALBA</div>
+            </div>
+            {[
+              { param: "Шум", bad: "45 дБ", good: "19 дБ" },
+              { param: "Управление", bad: "Только пульт", good: "Wi-Fi + голос + приложение" },
+              { param: "Экономия", bad: "Обычный компрессор", good: "AI EcoMaster -60%" },
+              { param: "Защита", bad: "Нет защиты", good: "Prime Guard от 145V" },
+              { param: "Охлаждение", bad: "15-20 минут", good: "3 минуты" },
+              { param: "Температура", bad: "±3°C скачки", good: "±0.5°C точность" },
+              { param: "Рассрочка", bad: "Нет", good: "0% на 12 месяцев" },
+              { param: "Цена", bad: "350-500$", good: "360$ (было 450$)" },
+            ].map((row, i) => (
+              <div key={i} className={`grid grid-cols-3 ${i % 2 === 0 ? "bg-white/[0.02]" : ""} border-b border-cyan-900/10 last:border-b-0`}>
+                <div className="p-3 sm:p-4 font-montserrat font-semibold text-white text-xs sm:text-sm flex items-center">{row.param}</div>
+                <div className="p-3 sm:p-4 font-montserrat text-xs sm:text-sm text-center flex items-center justify-center gap-1 text-red-400/80">
+                  <X className="w-3.5 h-3.5 shrink-0 text-red-500" />
+                  <span>{row.bad}</span>
+                </div>
+                <div className="p-3 sm:p-4 font-montserrat text-xs sm:text-sm text-center flex items-center justify-center gap-1 text-green-400 font-semibold bg-cyan-500/5">
+                  <Check className="w-3.5 h-3.5 shrink-0 text-green-500" />
+                  <span>{row.good}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="text-center mt-8">
+            <PulseCTA text="ВЫБРАТЬ ALBA — 360$" onClick={() => scrollTo("lead-form")} size="md" />
+          </div>
+        </div>
+      </Section>
+
+      {/* ═══ REVIEWS ═══ */}
+      <Section className="py-14 sm:py-20 bg-[#050D1A]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="text-center mb-10 sm:mb-14">
+            <h2 className="font-bebas text-4xl sm:text-6xl lg:text-7xl text-white">ЧТО ГОВОРЯТ <span className="text-cyan-400">КЛИЕНТЫ</span></h2>
+            <div className="flex items-center justify-center gap-2 mt-3">
+              <div className="flex gap-0.5">
+                {[...Array(5)].map((_, i) => <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />)}
+              </div>
+              <span className="font-montserrat text-white font-bold">4.9</span>
+              <span className="font-montserrat text-gray-400 text-sm">— 500+ отзывов</span>
+            </div>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+            {[
+              { name: "Акбар Рашидов", loc: "Юнусабад", text: "Купил месяц назад — счёт за свет реально снизился. Жена довольна — тихо работает, не мешает спать.", rating: 5, color: "from-cyan-500 to-blue-600" },
+              { name: "Дилноза Каримова", loc: "Мирзо-Улугбек", text: "Управляю с телефона — это космос! Включаю за 20 минут до прихода. Дети в детской спят отлично.", rating: 5, color: "from-pink-500 to-rose-600" },
+              { name: "Бахром Усманов", loc: "Чиланзар", text: "У нас напряжение скачет — старый кондей сгорел. ALBA работает без проблем уже 3 месяца.", rating: 5, color: "from-green-500 to-emerald-600" },
+              { name: "Малика Юсупова", loc: "Сергели", text: "Охлаждает очень быстро. Жара +45, а дома +22 через 5 минут. Установщики приехали в тот же день!", rating: 5, color: "from-yellow-500 to-amber-600" },
+              { name: "Санжар Тошматов", loc: "Бектемир", text: "Взял в рассрочку 0%. Переплаты нет. Кондей отличный — тихий, умный, красивый.", rating: 5, color: "from-indigo-500 to-violet-600" },
+              { name: "Гульнора Хасанова", loc: "Яккасарай", text: "Муж скептически относился к 'умному' кондею. Теперь сам управляет с телефона и хвастается перед друзьями!", rating: 5, color: "from-rose-500 to-red-600" },
+            ].map((review, i) => (
+              <motion.div
+                key={i}
+                className="rounded-2xl border border-cyan-900/30 bg-[#0a1628]/60 p-5 sm:p-6 hover:border-cyan-500/30 transition-all"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.08 }}
               >
-                <details className="group">
-                  <summary
-                    className="flex items-center justify-between p-5 cursor-pointer font-semibold text-white"
-                    style={{ background: "rgba(10,22,40,0.8)" }}
-                  >
-                    <span>{item.q}</span>
-                    <span style={{ color: "#00E5FF" }}>+</span>
-                  </summary>
-                  <div className="p-5 text-gray-300 text-sm leading-relaxed" style={{ background: "rgba(5,13,26,0.8)" }}>
-                    {item.a}
+                <div className="flex items-center gap-1 mb-3">
+                  {[...Array(5)].map((_, j) => (
+                    <Star key={j} className={`w-4 h-4 ${j < review.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-600"}`} />
+                  ))}
+                </div>
+                <p className="font-montserrat text-gray-300 text-sm leading-relaxed">"{review.text}"</p>
+                <div className="flex items-center gap-3 mt-4 pt-4 border-t border-white/5">
+                  <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${review.color} flex items-center justify-center font-bold text-sm text-white shrink-0`}>
+                    {review.name[0]}
                   </div>
-                </details>
+                  <div>
+                    <p className="font-montserrat font-bold text-white text-sm">{review.name}</p>
+                    <p className="font-montserrat text-gray-500 text-xs">Ташкент, {review.loc}</p>
+                  </div>
+                </div>
               </motion.div>
             ))}
           </div>
         </div>
-      </section>
+      </Section>
 
-      {/* ── FOOTER ── */}
-      <footer
-        className="py-12 px-4"
-        style={{
-          background: "rgba(0,0,0,0.5)",
-          borderTop: "1px solid rgba(0,229,255,0.1)",
-        }}
-      >
-        <div className="max-w-6xl mx-auto">
-          <div className="grid sm:grid-cols-3 gap-8 mb-8">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <span className="font-bebas text-2xl" style={{ color: "#00E5FF" }}>WELKIN</span>
-                <span className="text-gray-500">×</span>
-                <span className="font-bebas text-2xl text-white">MIDEA</span>
+      {/* ═══ PRICING + LEAD FORM COMBINED ═══ */}
+      <Section id="lead-form" className="py-14 sm:py-24 bg-gradient-to-b from-[#050D1A] via-[#081020] to-[#050D1A]">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+          {/* Urgency banner */}
+          <motion.div
+            className="text-center mb-8 sm:mb-12"
+            animate={{ scale: [1, 1.02, 1] }}
+            transition={{ duration: 3, repeat: Infinity }}
+          >
+            <span className="inline-flex items-center gap-2 bg-red-600/20 border border-red-500/40 rounded-full px-5 py-2 font-montserrat font-bold text-red-400 text-sm sm:text-base">
+              <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+              СПЕЦИАЛЬНАЯ ЦЕНА — ОСТАЛОСЬ {stock} ШТУК
+            </span>
+          </motion.div>
+
+          <div className="grid lg:grid-cols-2 gap-6 sm:gap-8">
+            {/* Left — Price card */}
+            <div className="rounded-3xl border-2 border-cyan-500/30 bg-gradient-to-br from-[#0a1628] to-[#081020] p-6 sm:p-8 relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-500 via-yellow-400 to-cyan-500" />
+
+              <div className="text-center mb-6">
+                <div className="flex items-center justify-center gap-3 mb-2">
+                  <span className="font-bebas text-6xl sm:text-8xl text-yellow-400 neon-yellow">360$</span>
+                </div>
+                <div className="flex items-center justify-center gap-3 mb-4">
+                  <span className="font-bebas text-2xl sm:text-3xl text-gray-500 line-through">450$</span>
+                  <span className="bg-red-600 text-white font-montserrat font-bold text-sm px-3 py-1 rounded-lg">-90$</span>
+                </div>
               </div>
-              <p className="text-gray-500 text-sm">Официальный дистрибьютор Midea в Узбекистане</p>
+
+              {/* Bonuses */}
+              <div className="space-y-3 mb-6">
+                {[
+                  { icon: <Truck className="w-5 h-5 text-cyan-400" />, title: "Бесплатная доставка", desc: "По всему Ташкенту" },
+                  { icon: <Wrench className="w-5 h-5 text-cyan-400" />, title: "Бесплатная установка", desc: "Мастер в тот же день" },
+                  { icon: <FileText className="w-5 h-5 text-cyan-400" />, title: "Гарантия 3 года", desc: "Официальная Midea" },
+                ].map((bonus, i) => (
+                  <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-cyan-900/20">
+                    <div className="shrink-0 w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center">{bonus.icon}</div>
+                    <div>
+                      <p className="font-montserrat font-bold text-white text-sm">{bonus.title}</p>
+                      <p className="font-montserrat text-gray-500 text-xs">{bonus.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Installment */}
+              <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/30 text-center">
+                <p className="font-montserrat font-bold text-green-400 text-base sm:text-lg">
+                  Рассрочка 0% — всего 30$/мес
+                </p>
+                <p className="font-montserrat text-gray-400 text-xs mt-1">12 месяцев без переплаты</p>
+              </div>
             </div>
-            <div>
-              <h4 className="font-semibold text-white mb-3">Контакты</h4>
-              <p className="text-gray-400 text-sm">📞 +998 99 892 36 02</p>
-              <p className="text-gray-400 text-sm mt-1">📱 Instagram: @welkin.midea</p>
-              <p className="text-gray-400 text-sm mt-1">💬 Telegram: @welkin_midea</p>
-            </div>
-            <div>
-              <h4 className="font-semibold text-white mb-3">Режим работы</h4>
-              <p className="text-gray-400 text-sm">Пн-Сб: 9:00 — 19:00</p>
-              <p className="text-gray-400 text-sm mt-1">Вс: 10:00 — 17:00</p>
-              <p className="text-gray-400 text-sm mt-1">Ташкент, Узбекистан</p>
+
+            {/* Right — Lead form */}
+            <div className="rounded-3xl border border-yellow-500/30 bg-gradient-to-br from-[#0a1628] to-[#081525] p-6 sm:p-8 relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-yellow-400 via-cyan-400 to-yellow-400" />
+
+              <div className="text-center mb-5 sm:mb-6">
+                <h2 className="font-bebas text-3xl sm:text-4xl text-white">ОСТАВЬ ЗАЯВКУ</h2>
+                <p className="font-montserrat text-gray-400 text-sm mt-2">
+                  Получи <span className="text-cyan-400 font-bold">бесплатную консультацию</span> и точную цену
+                </p>
+              </div>
+
+              {/* What you get */}
+              <div className="mb-5 p-3.5 rounded-xl bg-cyan-500/5 border border-cyan-500/20">
+                <p className="font-montserrat font-bold text-cyan-400 text-sm mb-2">Что вы получите:</p>
+                <ul className="space-y-1.5 text-xs sm:text-sm text-gray-300">
+                  <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-green-400 shrink-0" /> Точный расчёт для вашей комнаты</li>
+                  <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-green-400 shrink-0" /> Подбор оптимальной мощности</li>
+                  <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-green-400 shrink-0" /> Расчёт рассрочки 0%</li>
+                  <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-green-400 shrink-0" /> Запись на бесплатную установку</li>
+                </ul>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-3">
+                <input
+                  type="text"
+                  placeholder="Ваше имя"
+                  value={formName}
+                  onChange={e => setFormName(e.target.value)}
+                  className="w-full px-4 py-3.5 rounded-xl bg-white/5 border border-cyan-900/40 text-white placeholder-gray-500 font-montserrat text-sm focus:outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/30 transition-all"
+                />
+                <input
+                  type="tel"
+                  placeholder="+998 __ ___ __ __"
+                  value={formPhone}
+                  onChange={e => setFormPhone(e.target.value)}
+                  className="w-full px-4 py-3.5 rounded-xl bg-white/5 border border-cyan-900/40 text-white placeholder-gray-500 font-montserrat text-sm focus:outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/30 transition-all"
+                />
+                <motion.button
+                  type="submit"
+                  className="w-full font-bebas text-xl sm:text-2xl py-4 rounded-xl bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 text-black font-bold shadow-[0_0_30px_rgba(250,204,21,0.3)] hover:shadow-[0_0_50px_rgba(250,204,21,0.5)] transition-all flex items-center justify-center gap-2"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  {formSent ? (
+                    <><Check className="w-6 h-6" /> ЗАЯВКА ОТПРАВЛЕНА!</>
+                  ) : (
+                    <><Send className="w-5 h-5" /> ПОЛУЧИТЬ КОНСУЛЬТАЦИЮ</>
+                  )}
+                </motion.button>
+              </form>
+
+              <div className="flex items-center justify-center gap-3 mt-4 text-xs text-gray-500">
+                <span className="flex items-center gap-1"><Check className="w-3 h-3 text-green-500" /> Без предоплаты</span>
+                <span className="flex items-center gap-1"><Check className="w-3 h-3 text-green-500" /> Ответим за 5 мин</span>
+              </div>
+
+              <p className="text-center text-gray-600 text-[10px] mt-3">
+                Нажимая кнопку, вы соглашаетесь на обработку данных
+              </p>
             </div>
           </div>
-          <div
-            className="pt-6 text-center text-gray-600 text-xs"
-            style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}
-          >
-            © 2025 Welkin × Midea. Все права защищены.
+
+          {/* Or contact directly */}
+          <div className="mt-8 text-center">
+            <p className="font-montserrat text-gray-400 text-sm mb-4">Или свяжитесь напрямую:</p>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <a href={TELEGRAM_LINK} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-5 py-3 rounded-xl bg-[#0088cc] text-white font-montserrat font-bold text-sm hover:bg-[#0099dd] transition-all shadow-[0_0_15px_rgba(0,136,204,0.3)]">
+                <MessageCircle className="w-5 h-5" /> Telegram
+              </a>
+              <a href="https://wa.me/998998923602" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-5 py-3 rounded-xl bg-[#25D366] text-white font-montserrat font-bold text-sm hover:bg-[#20bd5a] transition-all shadow-[0_0_15px_rgba(37,211,102,0.3)]">
+                <Phone className="w-5 h-5" /> WhatsApp
+              </a>
+              <a href={INSTAGRAM_LINK} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-montserrat font-bold text-sm hover:from-purple-500 hover:to-pink-500 transition-all shadow-[0_0_15px_rgba(168,85,247,0.3)]">
+                <Sparkles className="w-5 h-5" /> Instagram
+              </a>
+              <a href={PHONE_HREF} className="flex items-center gap-2 px-5 py-3 rounded-xl bg-cyan-600/20 border border-cyan-500/40 text-cyan-300 font-montserrat font-bold text-sm hover:bg-cyan-600/30 transition-all">
+                <Phone className="w-5 h-5" /> {PHONE}
+              </a>
+            </div>
+          </div>
+        </div>
+      </Section>
+
+      {/* ═══ FAQ ═══ */}
+      <Section className="py-14 sm:py-20 bg-[#050D1A]">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6">
+          <h2 className="font-bebas text-4xl sm:text-6xl text-center text-white mb-10 sm:mb-14">ЧАСТЫЕ <span className="text-cyan-400">ВОПРОСЫ</span></h2>
+
+          <div className="space-y-3">
+            <FaqItem icon={<Wrench className="w-5 h-5" />} q="Сколько стоит установка?" a="Установка БЕСПЛАТНАЯ! Мастер приедет в день доставки или на следующий день. Стандартная установка (до 3м трассы) включена в стоимость." />
+            <FaqItem icon={<FileText className="w-5 h-5" />} q="Есть ли рассрочка?" a="Да! Рассрочка 0% на 12 месяцев без переплаты. Это всего 30$ в месяц. Оформление за 15 минут с паспортом." />
+            <FaqItem icon={<Shield className="w-5 h-5" />} q="Какая гарантия?" a="Официальная гарантия Midea — 3 года на весь кондиционер. Сервисный центр в Ташкенте. Запчасти всегда в наличии." />
+            <FaqItem icon={<Truck className="w-5 h-5" />} q="Доставляете в регионы?" a="Да! Доставляем по всему Узбекистану. По Ташкенту — бесплатно в тот же день. В регионы — 1-3 дня." />
+            <FaqItem icon={<Zap className="w-5 h-5" />} q="Работает ли при низком напряжении?" a="Да! Технология Prime Guard позволяет ALBA работать при напряжении от 145V. Защита от скачков, перегрева и замерзания." />
+            <FaqItem icon={<Timer className="w-5 h-5" />} q="На какую площадь хватает?" a="ALBA 9 — до 25 кв.м (комната, спальня). ALBA 12 — до 35 кв.м (гостиная). ALBA 18 — до 50 кв.м (большой зал). Поможем подобрать!" />
+          </div>
+        </div>
+      </Section>
+
+      {/* ═══ FINAL CTA BANNER ═══ */}
+      <Section className="py-14 sm:py-20 bg-gradient-to-r from-[#050D1A] via-[#0a1628] to-[#050D1A]">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+          <h2 className="font-bebas text-4xl sm:text-6xl text-white mb-3">ЛЕТО <span className="text-red-500">УЖЕ ЗДЕСЬ</span></h2>
+          <p className="font-montserrat text-gray-400 text-sm sm:text-lg mb-4 max-w-2xl mx-auto">
+            Не ждите +45°C — закажите Midea ALBA сейчас и забудьте о жаре, шуме и огромных счетах
+          </p>
+          <p className="font-montserrat text-yellow-400 font-bold text-base sm:text-xl mb-6">
+            Рассрочка 0% — всего 30$/мес
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <PulseCTA text="КУПИТЬ ЗА 360$ — СЭКОНОМИТЬ 90$" onClick={() => scrollTo("lead-form")} size="lg" />
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8 mt-6 text-xs sm:text-sm text-gray-400">
+            <span className="flex items-center gap-1.5"><Truck className="w-4 h-4 text-cyan-400" /> Бесплатная доставка</span>
+            <span className="flex items-center gap-1.5"><Wrench className="w-4 h-4 text-cyan-400" /> Бесплатная установка</span>
+            <span className="flex items-center gap-1.5"><Shield className="w-4 h-4 text-cyan-400" /> Гарантия 3 года</span>
+            <span className="flex items-center gap-1.5"><FileText className="w-4 h-4 text-cyan-400" /> Рассрочка 0%</span>
+          </div>
+        </div>
+      </Section>
+
+      {/* ═══ FOOTER ═══ */}
+      <footer className="py-10 sm:py-14 bg-[#030a14] border-t border-cyan-900/20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="grid sm:grid-cols-3 gap-8 sm:gap-12">
+            <div>
+              <div className="font-bebas text-xl tracking-wider mb-3">
+                <span className="text-cyan-400">WELKIN</span> &times; <span className="text-white">MIDEA</span>
+              </div>
+              <p className="font-montserrat text-gray-500 text-sm">Официальный дистрибьютор Midea в Узбекистане</p>
+              <div className="flex items-center gap-2 mt-3">
+                {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />)}
+                <span className="font-montserrat text-white text-sm font-bold ml-1">4.9</span>
+              </div>
+            </div>
+            <div>
+              <p className="font-montserrat font-bold text-white text-sm mb-3">Контакты</p>
+              <div className="space-y-2 text-sm text-gray-400">
+                <a href={PHONE_HREF} className="flex items-center gap-2 hover:text-cyan-400 transition-colors"><Phone className="w-4 h-4" />{PHONE}</a>
+                <a href={INSTAGRAM_LINK} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-cyan-400 transition-colors"><Sparkles className="w-4 h-4" />@welkin.midea</a>
+                <a href={TELEGRAM_LINK} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-cyan-400 transition-colors"><MessageCircle className="w-4 h-4" />@welkin_midea</a>
+              </div>
+            </div>
+            <div>
+              <p className="font-montserrat font-bold text-white text-sm mb-3">Режим работы</p>
+              <div className="space-y-1 text-sm text-gray-400">
+                <p>Пн-Сб: 9:00 — 19:00</p>
+                <p>Вс: 10:00 — 17:00</p>
+                <p className="mt-2">Ташкент, Узбекистан</p>
+              </div>
+            </div>
+          </div>
+          <div className="mt-8 pt-6 border-t border-cyan-900/20 text-center text-gray-600 text-xs font-montserrat">
+            &copy; 2026 Welkin &times; Midea. Все права защищены.
           </div>
         </div>
       </footer>
 
-      {/* ── STICKY CTA ── */}
-      <StickyCTA />
+      {/* ═══ STICKY BOTTOM BAR ═══ */}
+      <AnimatePresence>
+        {showSticky && (
+          <motion.div
+            initial={{ y: 100 }}
+            animate={{ y: 0 }}
+            exit={{ y: 100 }}
+            className="fixed bottom-0 left-0 right-0 z-50 bg-[#0a1628]/95 backdrop-blur-md border-t border-cyan-900/40 py-2.5 px-4"
+          >
+            <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <span className="font-bebas text-lg sm:text-xl text-white">ALBA</span>
+                <span className="font-bebas text-lg sm:text-xl text-yellow-400">360$</span>
+                <span className="font-bebas text-sm text-gray-500 line-through hidden sm:inline">450$</span>
+                <span className="text-[10px] sm:text-xs text-green-400 font-montserrat font-bold">или 30$/мес</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <PulseCTA text="КУПИТЬ" onClick={() => scrollTo("lead-form")} size="sm" />
+                <a href={TELEGRAM_LINK} target="_blank" rel="noopener noreferrer" className="shrink-0 w-10 h-10 rounded-xl bg-[#0088cc] flex items-center justify-center text-white hover:bg-[#0099dd] transition-all">
+                  <MessageCircle className="w-4 h-4" />
+                </a>
+                <a href="https://wa.me/998998923602" target="_blank" rel="noopener noreferrer" className="shrink-0 w-10 h-10 rounded-xl bg-[#25D366] flex items-center justify-center text-white hover:bg-[#20bd5a] transition-all">
+                  <Phone className="w-4 h-4" />
+                </a>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Bottom padding for sticky bar */}
+      <div className="h-16" />
     </div>
   );
 }
